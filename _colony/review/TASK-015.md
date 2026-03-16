@@ -50,3 +50,9 @@ Implement the LinkedIn platform module using Playwright for scraping and Google 
 - Handles login walls gracefully (doesn't crash, returns partial data)
 - Unit tests with mocked responses
 - `uv run pytest tests/test_platform_linkedin.py` passes
+
+---
+Claimed-By: alpha-2
+Claimed-At: 2026-03-16T22:58:02+02:00
+Completed-At: 2026-03-16T22:58:02+02:00
+Branch: task/TASK-015
