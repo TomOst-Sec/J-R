@@ -1,8 +1,22 @@
 [project]
 name = "argus-osint"
 version = "0.1.0"
-description = "Argus OSINT platform"
+description = "Multi-agent OSINT platform for cross-platform person discovery and verification"
+readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Internet",
+    "Typing :: Typed",
+]
 dependencies = [
     "aiohttp",
     "aiohttp-retry",
@@ -20,11 +34,18 @@ dependencies = [
     "aiosqlite",
 ]
 
+[project.urls]
+Homepage = "https://github.com/TomOst-Sec/J-R"
+Repository = "https://github.com/TomOst-Sec/J-R"
+
 [project.optional-dependencies]
 playwright = ["playwright"]
 face = ["face-recognition", "dlib"]
 llm = ["openai", "tiktoken"]
 api = ["fastapi", "uvicorn", "websockets"]
+mcp = ["mcp"]
+encrypted = ["sqlcipher3"]
+all = ["playwright", "openai", "tiktoken", "fastapi", "uvicorn", "websockets", "mcp"]
 
 [project.scripts]
 argus = "argus.cli:main"
