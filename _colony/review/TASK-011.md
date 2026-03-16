@@ -42,3 +42,7 @@ Implement the HackerNews platform module using the Algolia HN Search API.
 - HTML stripped from `about` field
 - Unit tests with mocked HTTP responses
 - `uv run pytest tests/test_platform_hackernews.py` passes
+
+---
+Claimed-By: alpha-1
+Completed-At: 2026-03-17T00:00:00+02:00

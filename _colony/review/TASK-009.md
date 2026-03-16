@@ -55,3 +55,7 @@ Implement SQLite-based investigation storage with full CRUD operations and resum
 - JSON fields properly serialized/deserialized
 - Unit tests with in-memory SQLite (`:memory:`)
 - `uv run pytest tests/test_storage.py` passes
+
+---
+Claimed-By: alpha-1
+Completed-At: 2026-03-17T00:00:00+02:00

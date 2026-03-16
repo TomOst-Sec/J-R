@@ -53,3 +53,7 @@ Implement stealth features: User-Agent rotation, per-platform token bucket rate 
 - Session factory creates properly configured aiohttp sessions
 - Unit tests for each component
 - `uv run pytest tests/test_stealth.py` passes
+
+---
+Claimed-By: alpha-1
+Completed-At: 2026-03-17T00:00:00+02:00
