@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from argus.mcp.server import (
+pytest.importorskip("mcp", reason="mcp package not installed")
+
+from argus.mcp.server import (  # noqa: E402
     _investigations,
     get_investigation,
     investigation_accounts,
