@@ -3,7 +3,13 @@
 from argus.config.settings import ArgusConfig
 from argus.models.profile import CandidateProfile, ProfileData
 from argus.models.verification import VerificationResult
-from argus.verification.signals import BaseSignal
+from argus.verification.signals import (
+    BaseSignal,
+    BioSimilaritySignal,
+    PhotoHashSignal,
+    UsernamePatternSignal,
+)
+from argus.verification.timezone_signal import TimezoneCorrelationSignal
 
 
 class VerificationEngine:
@@ -14,6 +20,16 @@ class VerificationEngine:
         self._signals: list[BaseSignal] = []
         self._weight_overrides = config.verification.signal_weights
         self._minimum_threshold = config.verification.minimum_threshold
+        self._register_default_signals()
+
+    def _register_default_signals(self) -> None:
+        """Register all built-in verification signals."""
+        self._signals.extend([
+            PhotoHashSignal(),
+            BioSimilaritySignal(),
+            UsernamePatternSignal(),
+            TimezoneCorrelationSignal(),
+        ])
 
     def register_signal(self, signal: BaseSignal) -> None:
         self._signals.append(signal)
