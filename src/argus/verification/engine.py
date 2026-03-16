@@ -9,6 +9,7 @@ from argus.verification.signals import (
     PhotoHashSignal,
     UsernamePatternSignal,
 )
+from argus.verification.connections_signal import MutualConnectionsSignal
 from argus.verification.timezone_signal import TimezoneCorrelationSignal
 
 
@@ -29,6 +30,7 @@ class VerificationEngine:
             BioSimilaritySignal(),
             UsernamePatternSignal(),
             TimezoneCorrelationSignal(),
+            MutualConnectionsSignal(),
         ])
 
     def register_signal(self, signal: BaseSignal) -> None:
