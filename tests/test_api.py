@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import pytest
-from fastapi.testclient import TestClient
 
-from argus.api.server import app, configure_auth, _investigations
+pytest.importorskip("fastapi", reason="fastapi package not installed")
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from argus.api.server import app, configure_auth, _investigations  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
