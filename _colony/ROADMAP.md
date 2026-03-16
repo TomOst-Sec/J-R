@@ -2,75 +2,55 @@
 
 ## Phase 1: Foundation (Milestone 1 — MVP) — COMPLETE
 
-**Goal:** `argus resolve "John Doe"` finds accounts across 6 platforms with confidence scoring.
+- [x] TASK-001–018: All foundation tasks merged. **M1 SHIPPED.**
 
-- [x] TASK-001–018: All foundation tasks merged. M1 SHIPPED.
+## Phase 2: Core Features (Milestone 2) — COMPLETE
 
-**Status: 18/18 merged.**
+- [x] TASK-019–032: All core feature tasks merged
+- [x] TASK-033: CLI resolve rework (Rich progress bar)
+- [x] TASK-034: Discord platform module
+- [x] TASK-035: Investigation persistence & resume
+- [x] TASK-036: Agent chaining via stdin/stdout pipes
+- [x] TASK-037: Mypy strict mode cleanup
 
-## Phase 2: Core Features (Milestone 2) — ~85% COMPLETE
+**Status: M2 SHIPPED. 37/37 tasks done.**
 
-**Goal:** Full pipeline with Linker, Profiler, all agents chained, 14+ platforms, HTML reports.
-
-- [x] TASK-019–032: Core agents, platform modules, verification signals, LLM provider — all merged
-- [ ] TASK-033: CLI resolve rework — Rich progress bar + live table
-- [ ] TASK-034: Discord platform module
-- [ ] TASK-035: Investigation persistence & resume — full implementation
-- [ ] TASK-036: Agent chaining via stdin/stdout pipes
-- [ ] TASK-037: Mypy strict mode cleanup (40 errors)
-
-**Status: 14/19 done. 5 remaining tasks queued.**
-
-## Phase 3: Polish & Launch (Milestone 3) — TASKS GENERATED
+## Phase 3: Polish & Launch (Milestone 3) — IN REVIEW
 
 **Goal:** MCP server, REST API, LangChain/CrewAI wrappers, Docker, docs.
 
-- [ ] TASK-038: MCP Server Mode (stdio transport, 5 tools, resources, prompts)
-- [ ] TASK-039: REST API Server (FastAPI, WebSocket streaming, auth)
-- [ ] TASK-040: Privacy and ethics safeguards (consent, audit, purge, data minimization)
-- [ ] TASK-041: Playwright stealth hardening (fingerprint rotation, CAPTCHA detection)
-- [ ] TASK-042: LangChain/CrewAI tool wrappers
-- [ ] TASK-043: Mutual connections verification signal
-- [ ] TASK-044: Docker image (multi-stage, <500MB)
-- [ ] TASK-045: Documentation (README, architecture, platform dev guide, API ref)
-- [ ] TASK-046: Performance optimization (connection pooling, caching, concurrency)
-- [ ] TASK-047: GraphML export for network visualization
-- [ ] TASK-048: Interactive REPL shell — argus shell
+- [ ] TASK-038: MCP Server Mode **[IN REVIEW]**
+- [ ] TASK-039: REST API Server (FastAPI) **[IN REVIEW]**
+- [ ] TASK-040: Privacy and ethics safeguards **[IN REVIEW]**
+- [ ] TASK-041: Playwright stealth hardening **[IN REVIEW]**
+- [ ] TASK-042: LangChain/CrewAI tool wrappers **[IN REVIEW]**
+- [ ] TASK-043: Mutual connections verification signal **[IN REVIEW]**
+- [ ] TASK-044: Docker image **[IN REVIEW]**
+- [ ] TASK-045: Documentation **[IN REVIEW]**
+- [ ] TASK-046: Performance optimization **[IN REVIEW]**
+- [ ] TASK-047: GraphML export **[IN REVIEW]**
+- [ ] TASK-048: Interactive REPL shell **[IN REVIEW]**
+- [ ] TASK-049: Face recognition signal (optional)
+- [ ] TASK-053: CI/CD pipeline — GitHub Actions
 
-### M3 Dependency Graph
-```
-Independent (start immediately):
-  TASK-044 (Docker), TASK-045 (docs), TASK-037 (mypy)
-
-Depend on existing code:
-  TASK-038 (MCP) ← TASK-012, 019, 020
-  TASK-039 (API) ← TASK-012, 019, 020
-  TASK-040 (privacy) ← TASK-012
-  TASK-041 (stealth) ← TASK-010
-  TASK-042 (LangChain) ← TASK-012, 019, 020
-  TASK-043 (connections) ← TASK-006
-  TASK-046 (perf) ← TASK-012
-  TASK-047 (GraphML) ← TASK-022
-  TASK-048 (REPL) ← TASK-021
-```
+**Status: 11 in review, 2 in queue. Awaiting audit/judge.**
 
 ## Phase 4: Advanced (Milestone 4)
 
-- [ ] Network Expansion Agent
-- [ ] Batch Investigation
-- [ ] Change Detection
-- [ ] Custom scoring models
-- [ ] Web UI
-- [ ] Encrypted storage
-- [ ] Multi-language content analysis
+- [ ] TASK-050: Network Expansion Agent — social graph discovery
+- [ ] TASK-051: Batch investigation — CSV processing
+- [ ] TASK-052: Change detection — periodic re-checking
+- [ ] TASK-054: Web UI — investigation dashboard
+- [ ] Encrypted storage (not yet tasked)
+- [ ] Multi-language content analysis (not yet tasked)
+- [ ] Custom scoring models (not yet tasked)
 
 ## Current Phase
-Phase 2 wrapping up → Phase 3 ramping
+M3 in review → M4 pre-loaded
 
 ## Notes
-- Colony shipped 32 tasks in ~75 minutes (extraordinary throughput)
-- 273 tests passing, ruff clean, 40 mypy strict errors (non-blocking)
-- Queue restocked: 16 tasks (TASK-033 through TASK-048)
-- TASK-033 (CLI rework) and TASK-037 (mypy) are quick wins
-- M3 has many independent tasks — all 5 coders can work in parallel
-- 55 source files, 31 test files, 15 platform modules
+- Colony shipped 48 tasks total across 4 atlas cycles
+- 16 tasks in review — audit/judge throughput is now the bottleneck
+- Queue has 6 tasks (TASK-049–054) ready for after review clears
+- 15 platform modules, full agent pipeline, MCP + REST API, docs, Docker — all coded
+- Tests: 439+ passing
