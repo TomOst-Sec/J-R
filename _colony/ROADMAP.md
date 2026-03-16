@@ -43,4 +43,4 @@ All milestones complete. Colony in maintenance mode.
 - **Platforms:** 15
 - **Agents:** 4
 - **Colony age at completion:** ~3.5 hours
-- **Pending:** 1 test issue (TASK-042 sys.modules), 84 mypy strict errors
+- **Pending:** TASK-065 (fix TASK-042 test isolation), 84 mypy strict errors
