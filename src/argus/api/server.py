@@ -7,8 +7,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from pathlib import Path
+
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
@@ -306,3 +309,19 @@ async def _run_investigation(inv_id: str, req: ResolveRequest) -> None:
     except Exception as e:
         _investigations[inv_id]["status"] = "failed"
         _investigations[inv_id]["result"] = {"error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Web UI
+# ---------------------------------------------------------------------------
+
+_UI_DIR = Path(__file__).parent.parent / "ui"
+
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_ui() -> HTMLResponse:
+    """Serve the web UI dashboard."""
+    index_path = _UI_DIR / "index.html"
+    if not index_path.exists():
+        return HTMLResponse("<h1>UI not found</h1>", status_code=404)
+    return HTMLResponse(index_path.read_text())

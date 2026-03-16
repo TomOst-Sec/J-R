@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Argus OSINT — Investigation Dashboard</title>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #30363d;
+  --text: #c9d1d9; --text-dim: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --yellow: #d29922; --red: #f85149;
+}
+[data-theme="light"] {
+  --bg: #f6f8fa; --surface: #ffffff; --border: #d0d7de;
+  --text: #24292f; --text-dim: #57606a; --accent: #0969da;
+  --green: #1a7f37; --yellow: #9a6700; --red: #cf222e;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif; background: var(--bg); color: var(--text); }
+header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; border-bottom: 1px solid var(--border); background: var(--surface); }
+header h1 { font-size: 1.25rem; }
+header h1 span { color: var(--accent); }
+nav { display: flex; gap: 1rem; }
+nav button { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 0.5rem; font-size: 0.9rem; }
+nav button.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+nav button:hover { color: var(--text); }
+#theme-toggle { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 0.25rem 0.5rem; cursor: pointer; border-radius: 4px; }
+main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+.page { display: none; }
+.page.active { display: block; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+.card h3 { margin-bottom: 0.5rem; }
+input, select, button.btn { padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font-size: 0.9rem; }
+button.btn { cursor: pointer; background: var(--accent); color: #fff; border: none; }
+button.btn:hover { opacity: 0.9; }
+table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+th { color: var(--text-dim); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
+.badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+.badge-green { background: var(--green); color: #fff; }
+.badge-yellow { background: var(--yellow); color: #fff; }
+.badge-red { background: var(--red); color: #fff; }
+.confidence-bar { height: 8px; border-radius: 4px; background: var(--border); }
+.confidence-fill { height: 100%; border-radius: 4px; }
+#graph-container { width: 100%; height: 400px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--text-dim); }
+.form-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.form-row input { flex: 1; min-width: 200px; }
+#status-bar { padding: 0.5rem 2rem; font-size: 0.85rem; color: var(--text-dim); border-top: 1px solid var(--border); text-align: center; }
+.investigation-list { list-style: none; }
+.investigation-list li { padding: 0.75rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.investigation-list li:hover { background: var(--bg); }
+@media (max-width: 768px) { main { padding: 1rem; } .form-row { flex-direction: column; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Argus</span> OSINT Dashboard</h1>
+  <div style="display:flex;gap:1rem;align-items:center">
+    <nav>
+      <button class="active" data-page="dashboard">Dashboard</button>
+      <button data-page="platforms">Platforms</button>
+      <button data-page="settings">Settings</button>
+    </nav>
+    <button id="theme-toggle">Theme</button>
+  </div>
+</header>
+
+<main>
+  <!-- Dashboard Page -->
+  <div id="page-dashboard" class="page active">
+    <div class="card">
+      <h3>New Investigation</h3>
+      <div class="form-row">
+        <input type="text" id="inv-name" placeholder="Person's name..." />
+        <input type="text" id="inv-location" placeholder="Location (optional)" />
+        <input type="text" id="inv-email" placeholder="Email (optional)" />
+        <button class="btn" id="start-btn">Investigate</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Investigations</h3>
+      <ul class="investigation-list" id="inv-list">
+        <li style="color:var(--text-dim)">Loading...</li>
+      </ul>
+    </div>
+    <div id="result-card" class="card" style="display:none">
+      <h3>Results — <span id="result-target"></span></h3>
+      <table>
+        <thead><tr><th>Platform</th><th>Username</th><th>Confidence</th><th>Label</th></tr></thead>
+        <tbody id="result-tbody"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Network Graph</h3>
+      <div id="graph-container">No investigation selected</div>
+    </div>
+  </div>
+
+  <!-- Platforms Page -->
+  <div id="page-platforms" class="page">
+    <div class="card">
+      <h3>Registered Platforms</h3>
+      <table>
+        <thead><tr><th>Platform</th><th>Base URL</th><th>Rate Limit</th><th>Auth</th><th>Priority</th></tr></thead>
+        <tbody id="platforms-tbody"><tr><td colspan="5" style="color:var(--text-dim)">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Settings Page -->
+  <div id="page-settings" class="page">
+    <div class="card">
+      <h3>Configuration</h3>
+      <pre id="config-display" style="overflow-x:auto;font-size:0.85rem;color:var(--text-dim)">Loading...</pre>
+    </div>
+  </div>
+</main>
+
+<div id="status-bar">Connected to Argus API</div>
+
+<script>
+const API = window.location.origin;
+
+// Navigation
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-' + btn.dataset.page).classList.add('active');
+    if (btn.dataset.page === 'platforms') loadPlatforms();
+    if (btn.dataset.page === 'settings') loadConfig();
+  });
+});
+
+// Theme toggle
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const body = document.body;
+  body.dataset.theme = body.dataset.theme === 'light' ? '' : 'light';
+});
+
+// Load investigations
+async function loadInvestigations() {
+  try {
+    const resp = await fetch(API + '/investigations');
+    const data = await resp.json();
+    const list = document.getElementById('inv-list');
+    if (!data.length) { list.innerHTML = '<li style="color:var(--text-dim)">No investigations yet</li>'; return; }
+    list.innerHTML = data.map(inv =>
+      `<li><span>${inv.target} <span class="badge badge-${inv.status==='completed'?'green':inv.status==='running'?'yellow':'red'}">${inv.status}</span></span><button class="btn" onclick="viewInv('${inv.id}')">View</button></li>`
+    ).join('');
+  } catch (e) { document.getElementById('status-bar').textContent = 'API connection failed'; }
+}
+
+// Start investigation
+document.getElementById('start-btn').addEventListener('click', async () => {
+  const name = document.getElementById('inv-name').value.trim();
+  if (!name) return;
+  const location = document.getElementById('inv-location').value.trim() || null;
+  const email = document.getElementById('inv-email').value.trim() || null;
+  document.getElementById('status-bar').textContent = 'Starting investigation...';
+  try {
+    const resp = await fetch(API + '/investigate', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, location, email})
+    });
+    const data = await resp.json();
+    document.getElementById('status-bar').textContent = `Investigation ${data.investigation_id} started`;
+    document.getElementById('inv-name').value = '';
+    setTimeout(loadInvestigations, 1000);
+  } catch (e) { document.getElementById('status-bar').textContent = 'Failed to start investigation'; }
+});
+
+// View investigation
+async function viewInv(id) {
+  try {
+    const resp = await fetch(API + '/investigate/' + id);
+    const data = await resp.json();
+    document.getElementById('result-card').style.display = 'block';
+    document.getElementById('result-target').textContent = data.target || id;
+    const accounts = data.result?.accounts || [];
+    const tbody = document.getElementById('result-tbody');
+    if (!accounts.length) { tbody.innerHTML = '<tr><td colspan="4">No accounts found</td></tr>'; return; }
+    tbody.innerHTML = accounts.map(a => {
+      const c = a.candidate || {};
+      const conf = (a.confidence * 100).toFixed(0);
+      const cls = a.confidence >= 0.7 ? 'green' : a.confidence >= 0.3 ? 'yellow' : 'red';
+      return `<tr><td>${c.platform||''}</td><td>${c.username||''}</td><td><span class="badge badge-${cls}">${conf}%</span></td><td>${a.threshold_label||''}</td></tr>`;
+    }).join('');
+  } catch (e) { console.error(e); }
+}
+window.viewInv = viewInv;
+
+// Load platforms
+async function loadPlatforms() {
+  try {
+    const resp = await fetch(API + '/platforms');
+    const data = await resp.json();
+    const tbody = document.getElementById('platforms-tbody');
+    tbody.innerHTML = data.map(p =>
+      `<tr><td>${p.name}</td><td>${p.base_url}</td><td>${p.rate_limit_per_minute}/min</td><td>${p.requires_auth?'Yes':'No'}</td><td>${p.priority}</td></tr>`
+    ).join('');
+  } catch (e) { console.error(e); }
+}
+
+// Load config
+async function loadConfig() {
+  try {
+    const resp = await fetch(API + '/config/show');
+    if (resp.ok) {
+      const data = await resp.text();
+      document.getElementById('config-display').textContent = data;
+    }
+  } catch (e) { document.getElementById('config-display').textContent = 'Could not load config'; }
+}
+
+// Init
+loadInvestigations();
+</script>
+</body>
+</html>
