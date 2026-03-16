@@ -43,3 +43,8 @@ Implement the argus.toml configuration system with layered loading, env var inte
 - Defaults work when no config file exists
 - Unit tests cover: default loading, file loading, env override, env interpolation
 - `uv run pytest tests/test_config.py` passes
+
+---
+Claimed-By: alpha-1
+Claimed-At: 2026-03-16T23:30:00+02:00
+Completed-At: 2026-03-16T23:35:00+02:00
