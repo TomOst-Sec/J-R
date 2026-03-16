@@ -157,20 +157,60 @@ async def _resolve_async(
         agent_input = AgentInput(target=target)
 
         if not is_json and platform_names:
-            from rich.progress import Progress, SpinnerColumn, TextColumn
+            from rich.live import Live
+            from rich.panel import Panel
+            from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
-            with Progress(
+            results_table = Table(show_header=True, header_style="bold")
+            results_table.add_column("Platform")
+            results_table.add_column("Username")
+            results_table.add_column("URL")
+            results_table.add_column("Confidence", justify="right")
+            results_table.add_column("Label")
+
+            progress = Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("{task.completed}/{task.total}"),
                 console=console,
-                transient=True,
-            ) as progress:
-                task_id = progress.add_task(
-                    f"Checking {len(platform_names)} platform(s)...",
-                    total=None,
-                )
+                transient=False,
+            )
+            task_id = progress.add_task(
+                "Checking platforms...",
+                total=len(platform_names),
+            )
+
+            from rich.layout import Layout
+
+            layout = Layout()
+            layout.split_column(
+                Layout(progress, size=1),
+                Layout(Panel(results_table, title="Discovered Accounts", border_style="dim")),
+            )
+
+            with Live(layout, console=console, refresh_per_second=4, transient=True):
                 output = await agent.run(agent_input)
-                progress.update(task_id, description="[green]Pipeline complete[/green]")
+                progress.update(
+                    task_id,
+                    completed=len(platform_names),
+                    description="[green]Pipeline complete[/green]",
+                )
+
+                # Populate the live table with results
+                from argus.models.agent import ResolverOutput
+
+                if isinstance(output, ResolverOutput):
+                    for vr in output.accounts:
+                        conf = vr.confidence
+                        color = "green" if conf >= 0.70 else "yellow" if conf >= 0.30 else "red"
+                        results_table.add_row(
+                            vr.candidate.platform,
+                            vr.candidate.username,
+                            vr.candidate.url,
+                            f"[{color}]{conf:.0%}[/{color}]",
+                            vr.threshold_label,
+                        )
         else:
             output = await agent.run(agent_input)
 
