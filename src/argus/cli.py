@@ -129,15 +129,21 @@ async def _resolve_async(
         phone=phone,
     )
 
-    console.print(f"[bold]Resolving:[/bold] {name}")
-    if location:
-        console.print(f"[dim]Location:[/dim] {location}")
     platform_names = registry.list_platforms()
-    console.print(f"[dim]Platforms:[/dim] {', '.join(platform_names) if platform_names else 'none discovered'}")
+    is_json = output_format == "json"
+
+    if not is_json:
+        console.print(f"[bold]Resolving:[/bold] {name}")
+        if location:
+            console.print(f"[dim]Location:[/dim] {location}")
+        console.print(
+            f"[dim]Platforms:[/dim] "
+            f"{', '.join(platform_names) if platform_names else 'none discovered'}"
+        )
 
     start_time = time.monotonic()
 
-    # Run resolver
+    # Run resolver with progress display
     db = Database()
     await db.initialize()
 
@@ -150,14 +156,29 @@ async def _resolve_async(
         )
         agent_input = AgentInput(target=target)
 
-        console.print("[dim]Running resolver pipeline...[/dim]")
-        output = await agent.run(agent_input)
+        if not is_json and platform_names:
+            from rich.progress import Progress, SpinnerColumn, TextColumn
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True,
+            ) as progress:
+                task_id = progress.add_task(
+                    f"Checking {len(platform_names)} platform(s)...",
+                    total=None,
+                )
+                output = await agent.run(agent_input)
+                progress.update(task_id, description="[green]Pipeline complete[/green]")
+        else:
+            output = await agent.run(agent_input)
 
     await db.close()
     elapsed = time.monotonic() - start_time
 
     # Display results
-    if output_format == "json":
+    if is_json:
         console.print(output.model_dump_json(indent=2))
     else:
         _display_table(output, name, len(platform_names), elapsed)
