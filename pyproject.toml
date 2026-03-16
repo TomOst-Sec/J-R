@@ -26,6 +26,7 @@ face = ["face-recognition", "dlib"]
 llm = ["openai", "tiktoken"]
 api = ["fastapi", "uvicorn", "websockets"]
 mcp = ["mcp>=1.0"]
+encrypted = ["sqlcipher3"]
 
 [project.scripts]
 argus = "argus.cli:main"
