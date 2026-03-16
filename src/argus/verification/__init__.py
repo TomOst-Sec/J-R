@@ -4,6 +4,7 @@ from argus.verification.engine import VerificationEngine
 from argus.verification.signals import (
     BaseSignal,
     BioSimilaritySignal,
+    MutualConnectionsSignal,
     PhotoHashSignal,
     UsernamePatternSignal,
 )
@@ -11,6 +12,7 @@ from argus.verification.signals import (
 __all__ = [
     "BaseSignal",
     "BioSimilaritySignal",
+    "MutualConnectionsSignal",
     "PhotoHashSignal",
     "UsernamePatternSignal",
     "VerificationEngine",

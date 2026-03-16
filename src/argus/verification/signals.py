@@ -163,6 +163,70 @@ class UsernamePatternSignal(BaseSignal):
         )
 
 
+class MutualConnectionsSignal(BaseSignal):
+    """Check for mutual connections between candidate and other verified accounts."""
+
+    name = "mutual_connections"
+    default_weight = 0.10
+
+    async def compute(
+        self,
+        candidate: CandidateProfile,
+        seed_profiles: list[ProfileData],
+        all_candidates: list[CandidateProfile],
+    ) -> SignalResult:
+        if not candidate.scraped_data:
+            return SignalResult(
+                signal_name=self.name,
+                score=0.0,
+                weight=self.default_weight,
+                evidence="No scraped data for candidate",
+            )
+
+        candidate_links = set(candidate.scraped_data.links)
+        candidate_bio = (candidate.scraped_data.bio or "").lower()
+        mutual_count = 0
+        evidence_parts: list[str] = []
+
+        # Check if candidate links to or mentions other candidates
+        for other in all_candidates:
+            if other.platform == candidate.platform and other.username == candidate.username:
+                continue
+            # Check if candidate's links contain the other's URL
+            if other.url and other.url in candidate_links:
+                mutual_count += 1
+                evidence_parts.append(f"Links to {other.platform}/@{other.username}")
+            # Check if candidate's bio mentions the other's username
+            elif other.username.lower() in candidate_bio:
+                mutual_count += 1
+                evidence_parts.append(f"Bio mentions @{other.username}")
+
+        # Check against seed profiles
+        for seed in seed_profiles:
+            seed_links = set(seed.links)
+            if candidate.url and candidate.url in seed_links:
+                mutual_count += 1
+                evidence_parts.append(f"Seed @{seed.username} links to candidate")
+            if candidate.username.lower() in (seed.bio or "").lower():
+                mutual_count += 1
+                evidence_parts.append(f"Seed @{seed.username} bio mentions candidate")
+
+        # Score: more mutual connections = higher score
+        if mutual_count == 0:
+            score = 0.0
+            evidence = "No mutual connections found"
+        else:
+            score = min(mutual_count * 0.25, 1.0)
+            evidence = f"{mutual_count} mutual connection(s): {'; '.join(evidence_parts[:3])}"
+
+        return SignalResult(
+            signal_name=self.name,
+            score=score,
+            weight=self.default_weight,
+            evidence=evidence,
+        )
+
+
 def _hamming_distance(hash1: str, hash2: str) -> int:
     """Compute hamming distance between two hex hash strings."""
     if len(hash1) != len(hash2):
