@@ -77,3 +77,19 @@ class TestCLI:
             json_str = "\n".join(json_lines)
             data = json_module.loads(json_str)
             assert data["agent_name"] == "resolver"
+
+    def test_resolve_shows_progress_text(self):
+        """Verify the CLI shows progress-related output during resolve."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["resolve", "Test User"])
+        assert result.exit_code == 0
+        # Should show "Checking platforms" somewhere in output
+        assert "Checking platforms" in result.output or "Resolving:" in result.output
+
+    def test_resolve_shows_summary(self):
+        """Verify the CLI shows a final summary with counts."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["resolve", "Test User"])
+        assert result.exit_code == 0
+        # Should show found/account count in output
+        assert "Found" in result.output or "No accounts" in result.output

@@ -137,33 +137,69 @@ async def _resolve_async(
 
     start_time = time.monotonic()
 
+    # Set up live results table and progress
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+
+    results_table = Table(show_header=True, header_style="bold")
+    results_table.add_column("Platform")
+    results_table.add_column("Username")
+    results_table.add_column("URL")
+    results_table.add_column("Confidence", justify="right")
+    results_table.add_column("Label")
+
+    platforms_done = 0
+    total_platforms = len(platform_names)
+
+    progress = Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        console=console,
+    )
+    platform_task = progress.add_task(
+        "Checking platforms...", total=total_platforms if total_platforms > 0 else 1
+    )
+
+    # Callback for live updates
+    def _on_platform_done(pname: str, candidates: list) -> None:
+        nonlocal platforms_done
+        platforms_done += 1
+        progress.update(platform_task, advance=1, description=f"Checking platforms... ({pname} done)")
+
     # Run resolver
     db = Database()
     await db.initialize()
 
-    async with aiohttp.ClientSession() as session:
-        agent = ResolverAgent(
-            session=session,
-            config=config,
-            registry=registry,
-            db=db,
-        )
-        agent_input = AgentInput(target=target)
-
-        console.print("[dim]Running resolver pipeline...[/dim]")
-        output = await agent.execute(agent_input)
+    progress.start()
+    try:
+        async with aiohttp.ClientSession() as session:
+            agent = ResolverAgent(
+                session=session,
+                config=config,
+                registry=registry,
+                db=db,
+                on_platform_done=_on_platform_done,
+            )
+            agent_input = AgentInput(target=target)
+            output = await agent.execute(agent_input)
+    finally:
+        progress.update(platform_task, completed=total_platforms if total_platforms > 0 else 1)
+        progress.stop()
 
     await db.close()
     elapsed = time.monotonic() - start_time
 
-    # Display results
+    # Display results with Live table (streaming appearance)
     if output_format == "json":
         console.print(output.model_dump_json(indent=2))
     else:
-        _display_table(output, name, len(platform_names), elapsed)
+        _display_live_results(output, name, len(platform_names), elapsed)
 
 
-def _display_table(output, target_name: str, platform_count: int, elapsed: float) -> None:
+def _display_live_results(output, target_name: str, platform_count: int, elapsed: float) -> None:
+    from rich.live import Live
+
     from argus.models.agent import ResolverOutput
 
     assert isinstance(output, ResolverOutput)
@@ -187,25 +223,28 @@ def _display_table(output, target_name: str, platform_count: int, elapsed: float
     table.add_column("Confidence", justify="right")
     table.add_column("Label")
 
-    for vr in accounts:
-        conf = vr.confidence
-        if conf >= 0.70:
-            color = "green"
-        elif conf >= 0.30:
-            color = "yellow"
-        else:
-            color = "red"
+    # Stream results into a Live-updating table
+    with Live(table, console=console, refresh_per_second=4) as live:
+        for vr in accounts:
+            conf = vr.confidence
+            if conf >= 0.70:
+                color = "green"
+            elif conf >= 0.30:
+                color = "yellow"
+            else:
+                color = "red"
 
-        table.add_row(
-            vr.candidate.platform,
-            vr.candidate.username,
-            vr.candidate.url,
-            f"[{color}]{conf:.0%}[/{color}]",
-            vr.threshold_label,
-        )
+            table.add_row(
+                vr.candidate.platform,
+                vr.candidate.username,
+                vr.candidate.url,
+                f"[{color}]{conf:.0%}[/{color}]",
+                vr.threshold_label,
+            )
+            live.update(table)
 
-    console.print(table)
     console.print(
         f"\n[bold]Found {len(accounts)} account(s) across "
-        f"{len(set(vr.candidate.platform for vr in accounts))} platform(s)[/bold]"
+        f"{len(set(vr.candidate.platform for vr in accounts))} platform(s) "
+        f"in {elapsed:.1f}s[/bold]"
     )

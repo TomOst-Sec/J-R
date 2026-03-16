@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from argus.agents.base import BaseAgent
@@ -36,11 +37,13 @@ class ResolverAgent(BaseAgent):
         config: ArgusConfig | None = None,
         registry: PlatformRegistry | None = None,
         db: Database | None = None,
+        on_platform_done: Callable[[str, list[CandidateProfile]], None] | None = None,
     ) -> None:
         self._session = session
         self._config = config or ArgusConfig()
         self._registry = registry or PlatformRegistry()
         self._db = db
+        self._on_platform_done = on_platform_done
 
     async def run(self, input: AgentInput) -> ResolverOutput:
         config = self._config
@@ -81,11 +84,15 @@ class ResolverAgent(BaseAgent):
                 for platform in platform_instances
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            for result in results:
+            for platform, result in zip(platform_instances, results):
                 if isinstance(result, list):
                     candidates.extend(result)
+                    if self._on_platform_done:
+                        self._on_platform_done(platform.name, result)
                 elif isinstance(result, Exception):
                     logger.warning("Platform fan-out error: %s", result)
+                    if self._on_platform_done:
+                        self._on_platform_done(platform.name, [])
         timings["platform_fanout"] = time.monotonic() - t0
 
         # Step 4: Profile scraping
