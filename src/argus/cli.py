@@ -157,35 +157,20 @@ async def _resolve_async(
         agent_input = AgentInput(target=target)
 
         if not is_json and platform_names:
-            from rich.live import Live
-            from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
+            from rich.progress import Progress, SpinnerColumn, TextColumn
 
-            total = len(platform_names)
-            progress = Progress(
+            with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TaskProgressColumn(),
                 console=console,
-            )
-            progress_task = progress.add_task("Checking platforms...", total=total)
-
-            live_table = Table(show_header=True, header_style="bold")
-            live_table.add_column("Platform")
-            live_table.add_column("Found")
-
-            def _on_platform_done(pname: str, candidates: list) -> None:
-                progress.advance(progress_task)
-                progress.update(progress_task, description=f"Checking platforms... ({pname} done)")
-                live_table.add_row(pname, str(len(candidates)))
-
-            agent._on_platform_done = _on_platform_done
-
-            from rich.console import Group
-
-            with Live(Group(progress, live_table), console=console, refresh_per_second=4):
+                transient=True,
+            ) as progress:
+                task_id = progress.add_task(
+                    f"Checking {len(platform_names)} platform(s)...",
+                    total=None,
+                )
                 output = await agent.run(agent_input)
-                progress.update(progress_task, completed=total)
+                progress.update(task_id, description="[green]Pipeline complete[/green]")
         else:
             output = await agent.run(agent_input)
 
@@ -545,16 +530,3 @@ def report_cmd(name: str, report_format: str, output_file: str | None) -> None:
         console.print(f"[green]Report saved to {output_file}[/green]")
     else:
         console.print(content)
-
-
-# ---------------------------------------------------------------------------
-# argus shell
-# ---------------------------------------------------------------------------
-
-
-@main.command("shell")
-def shell_cmd() -> None:
-    """Start interactive Argus REPL shell."""
-    from argus.shell import run_shell
-
-    run_shell()
