@@ -1,6 +1,7 @@
 """Profile models for Argus OSINT platform."""
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -18,7 +19,7 @@ class ProfileData(BaseModel):
     join_date: datetime | None = None
     follower_count: int | None = None
     following_count: int | None = None
-    raw_json: dict | None = None
+    raw_json: dict[str, Any] | None = None
 
 
 class CandidateProfile(BaseModel):
@@ -40,5 +41,5 @@ class ContentItem(BaseModel):
     timestamp: datetime | None = None
     content_type: str = "post"
     url: str | None = None
-    engagement: dict | None = None
-    metadata: dict | None = None
+    engagement: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None

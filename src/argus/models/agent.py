@@ -13,8 +13,8 @@ class AgentInput(BaseModel):
     model_config = ConfigDict(strict=False)
 
     target: TargetInput
-    config: dict | None = None
-    options: dict | None = None
+    config: dict[str, Any] | None = None
+    options: dict[str, Any] | None = None
 
 
 class AgentOutput(BaseModel):
@@ -23,7 +23,7 @@ class AgentOutput(BaseModel):
     target_name: str
     agent_name: str
     results: list[Any] = Field(default_factory=list)
-    metadata: dict | None = None
+    metadata: dict[str, Any] | None = None
     duration_seconds: float | None = None
 
 

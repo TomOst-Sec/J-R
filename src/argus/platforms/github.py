@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from argus.models.profile import CandidateProfile, ContentItem, ProfileData
 from argus.platforms.base import BasePlatform
@@ -32,7 +32,7 @@ class GitHubPlatform(BasePlatform):
         super().__init__(session, config)
         self._rate_limit_remaining: int | None = None
 
-    def _update_rate_limit(self, headers: dict) -> None:
+    def _update_rate_limit(self, headers: Any) -> None:
         remaining = headers.get("X-RateLimit-Remaining")
         if remaining is not None:
             self._rate_limit_remaining = int(remaining)

@@ -1,6 +1,6 @@
 """Verification models for Argus OSINT platform."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -14,7 +14,7 @@ class SignalResult(BaseModel):
     score: float = Field(ge=0.0, le=1.0)
     weight: float
     evidence: str
-    details: dict | None = None
+    details: dict[str, Any] | None = None
 
 
 class VerificationResult(BaseModel):

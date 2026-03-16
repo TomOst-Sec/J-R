@@ -109,8 +109,9 @@ class ResolverAgent(BaseAgent):
                 inv_repo = InvestigationRepository(self._db)
                 acct_repo = AccountRepository(self._db)
                 inv = await inv_repo.create_investigation(target)
-                await acct_repo.save_accounts(inv.id, verified)
-                await inv_repo.update_status(inv.id, "completed")
+                inv_id = inv["id"] if isinstance(inv, dict) else inv.id
+                await acct_repo.save_accounts(inv_id, verified)
+                await inv_repo.update_status(inv_id, "completed")
             except Exception:
                 logger.warning("Failed to persist results", exc_info=True)
         timings["persist"] = time.monotonic() - t0
