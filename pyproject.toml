@@ -25,6 +25,7 @@ playwright = ["playwright"]
 face = ["face-recognition", "dlib"]
 llm = ["openai", "tiktoken"]
 api = ["fastapi", "uvicorn", "websockets"]
+mcp = ["mcp>=1.0"]
 
 [project.scripts]
 argus = "argus.cli:main"
