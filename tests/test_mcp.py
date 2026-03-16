@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+pytest.importorskip("mcp", reason="MCP SDK not installed (install with: pip install argus-osint[mcp])")
+
 from argus.mcp.server import (
     _investigations,
     get_investigation,

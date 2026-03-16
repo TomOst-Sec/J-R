@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import pytest
+
+pytest.importorskip("fastapi", reason="FastAPI not installed (install with: pip install argus-osint[api])")
+
 from fastapi.testclient import TestClient
 
 from argus.api.server import app, configure_auth, _investigations
