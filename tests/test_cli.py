@@ -77,3 +77,121 @@ class TestCLI:
             json_str = "\n".join(json_lines)
             data = json_module.loads(json_str)
             assert data["agent_name"] == "resolver"
+
+
+class TestPlatformsCLI:
+    def test_platforms_help(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["platforms", "--help"])
+        assert result.exit_code == 0
+
+    def test_platforms_runs(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["platforms"])
+        assert result.exit_code == 0
+
+
+class TestConfigCLI:
+    def test_config_show(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["config", "show"])
+        assert result.exit_code == 0
+        assert "general" in result.output
+
+    def test_config_path(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["config", "path"])
+        assert result.exit_code == 0
+        assert "argus.toml" in result.output
+
+    def test_config_init(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        runner = CliRunner()
+        result = runner.invoke(main, ["config", "init"])
+        assert result.exit_code == 0
+        assert (tmp_path / "argus.toml").exists()
+
+
+class TestLinkCLI:
+    def test_link_help(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["link", "--help"])
+        assert result.exit_code == 0
+        assert "--topic" in result.output
+
+    def test_link_runs(self):
+        runner = CliRunner()
+        result = runner.invoke(
+            main, ["link", "John Doe", "--topic", "machine learning"]
+        )
+        assert result.exit_code == 0
+
+    def test_link_json_output(self):
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            ["link", "John Doe", "--topic", "AI", "--output", "json"],
+        )
+        assert result.exit_code == 0
+        assert "linker" in result.output
+
+
+class TestProfileCLI:
+    def test_profile_help(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["profile", "--help"])
+        assert result.exit_code == 0
+
+    def test_profile_runs(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["profile", "John Doe"])
+        assert result.exit_code == 0
+
+    def test_profile_json_output(self):
+        runner = CliRunner()
+        result = runner.invoke(
+            main, ["profile", "John Doe", "--output", "json"]
+        )
+        assert result.exit_code == 0
+        assert "profiler" in result.output
+
+
+class TestReportCLI:
+    def test_report_help(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["report", "--help"])
+        assert result.exit_code == 0
+
+    def test_report_json(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["report", "John Doe", "--format", "json"])
+        assert result.exit_code == 0
+        assert "John Doe" in result.output
+
+    def test_report_markdown(self):
+        runner = CliRunner()
+        result = runner.invoke(
+            main, ["report", "John Doe", "--format", "markdown"]
+        )
+        assert result.exit_code == 0
+        assert "# Investigation Report" in result.output
+
+    def test_report_to_file(self, tmp_path):
+        runner = CliRunner()
+        output_file = str(tmp_path / "report.json")
+        result = runner.invoke(
+            main, ["report", "John Doe", "--format", "json", "--output", output_file]
+        )
+        assert result.exit_code == 0
+        from pathlib import Path
+
+        assert Path(output_file).exists()
+
+
+class TestHelpListsAllCommands:
+    def test_all_commands_in_help(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["--help"])
+        assert result.exit_code == 0
+        for cmd in ["resolve", "link", "profile", "report", "platforms", "config"]:
+            assert cmd in result.output
