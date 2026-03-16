@@ -42,8 +42,6 @@ class TestBasicNameGeneration:
 
     def test_results_are_lowercase(self):
         results = generate_username_candidates("John DOE")
-        assert all(r == r.lower() or r == r for r in results)
-        # All generated from name should be lowercase
         for r in results:
             assert r.islower() or any(c.isdigit() for c in r)
 
@@ -55,7 +53,6 @@ class TestEmailAndHintPriority:
 
     def test_email_username_is_prioritized(self):
         results = generate_username_candidates("John Doe", email="coolj@example.com")
-        # Hints/email should come before generated patterns
         assert results.index("coolj") < results.index("johndoe")
 
     def test_username_hint_included(self):
@@ -69,7 +66,6 @@ class TestEmailAndHintPriority:
     def test_hint_variations_included(self):
         results = generate_username_candidates("John Doe", username_hint="jdhacker")
         assert "jdhacker" in results
-        # Should have at least one variation
         hint_variants = [r for r in results if "jdhacker" in r and r != "jdhacker"]
         assert len(hint_variants) >= 1
 
@@ -84,20 +80,16 @@ class TestEdgeCases:
     def test_compound_last_name(self):
         results = generate_username_candidates("Ludwig van Beethoven")
         assert "ludwigvanbeethoven" in results
-        # Should treat "Beethoven" as last name
         assert "ludwigbeethoven" in results
 
     def test_name_with_apostrophe(self):
         results = generate_username_candidates("Miles O'Brien")
         assert "milesobrien" in results
-        # Special chars removed
         assert all("'" not in r for r in results)
 
     def test_name_with_hyphen_in_surname(self):
         results = generate_username_candidates("Mary Smith-Jones")
         assert "marysmithjones" in results
-        # May also keep hyphen as separator
-        assert "marysmith-jones" in results or "marysmithjones" in results
 
     def test_accented_characters_normalized(self):
         results = generate_username_candidates("José García")
@@ -111,7 +103,6 @@ class TestEdgeCases:
         long_name = "Alexander Bartholomew Christopher Davidson"
         results = generate_username_candidates(long_name)
         assert len(results) <= 30
-        # Should still have reasonable length usernames
         assert all(len(r) <= 50 for r in results)
 
     def test_al_prefix_name(self):
