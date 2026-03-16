@@ -454,3 +454,16 @@ def report_cmd(name: str, report_format: str, output_file: str | None) -> None:
         console.print(f"[green]Report saved to {output_file}[/green]")
     else:
         console.print(content)
+
+
+# ---------------------------------------------------------------------------
+# argus shell
+# ---------------------------------------------------------------------------
+
+
+@main.command("shell")
+def shell_cmd() -> None:
+    """Start interactive Argus REPL shell."""
+    from argus.shell import run_shell
+
+    run_shell()
