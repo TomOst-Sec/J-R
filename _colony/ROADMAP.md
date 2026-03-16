@@ -4,7 +4,7 @@
 
 **Goal:** `argus resolve "John Doe"` finds accounts across 6 platforms with confidence scoring.
 
-- [x] TASK-001: Project scaffolding (pyproject.toml, directory structure, UV)
+- [ ] TASK-001: Project scaffolding (pyproject.toml, directory structure, UV) **[ACTIVE — alpha-3, BLOCKED]**
 - [ ] TASK-002: Core Pydantic data models
 - [ ] TASK-003: Configuration system (argus.toml)
 - [ ] TASK-004: BasePlatform interface + plugin auto-discovery
@@ -86,3 +86,4 @@ Phase 1 — Foundation / MVP
 - TASK-001 is the critical path blocker — all other tasks depend on it
 - Platform modules (TASK-007/008/011/014/015/016) are highly parallelizable
 - Verification engine (TASK-006) and storage (TASK-009) can be built in parallel with platforms
+- CEO Cycle 1 (2026-03-16): Colony bottlenecked on TASK-001 — alpha-3 claimed but 0 commits
