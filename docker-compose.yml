@@ -1,0 +1,25 @@
+services:
+  argus:
+    build: .
+    volumes:
+      - argus-data:/root/.argus
+    environment:
+      - ARGUS_LLM_PROVIDER=none
+    entrypoint: ["argus"]
+    command: ["--help"]
+
+  argus-api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - argus-data:/root/.argus
+    environment:
+      - ARGUS_LLM_PROVIDER=none
+      - ARGUS_API_HOST=0.0.0.0
+      - ARGUS_API_PORT=8000
+    entrypoint: ["argus"]
+    command: ["serve", "--api", "--host", "0.0.0.0", "--port", "8000"]
+
+volumes:
+  argus-data:
