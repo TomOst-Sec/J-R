@@ -320,37 +320,68 @@ def config_init() -> None:
     default="table",
     help="Output format.",
 )
-def link_cmd(name: str, topic: str, topic_description: str | None, output_format: str) -> None:
+@click.option("--input", "input_source", default=None, help="Read JSON from stdin (-) or file.")
+@click.option("--quiet", is_flag=True, help="Suppress non-JSON output.")
+def link_cmd(
+    name: str,
+    topic: str,
+    topic_description: str | None,
+    output_format: str,
+    input_source: str | None,
+    quiet: bool,
+) -> None:
     """Find connections between a person and a topic."""
     try:
-        asyncio.run(_link_async(name, topic, topic_description, output_format))
+        asyncio.run(_link_async(name, topic, topic_description, output_format, input_source, quiet))
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+        if not quiet:
+            console.print(f"[red]Error: {e}[/red]")
         sys.exit(1)
 
 
 async def _link_async(
-    name: str, topic: str, topic_description: str | None, output_format: str
+    name: str,
+    topic: str,
+    topic_description: str | None,
+    output_format: str,
+    input_source: str | None = None,
+    quiet: bool = False,
 ) -> None:
     from argus.agents.linker import LinkerAgent, LinkerInput
     from argus.models.target import TargetInput
 
-    console.print(f"[bold]Linking:[/bold] {name} <-> {topic}")
+    stderr_console = Console(stderr=True) if quiet else console
+
+    # Read piped input if specified
+    accounts = []
+    content = []
+    if input_source == "-" or (input_source is None and not sys.stdin.isatty()):
+        import json as json_mod
+
+        stdin_data = sys.stdin.read()
+        if stdin_data.strip():
+            piped = json_mod.loads(stdin_data)
+            accounts = piped.get("accounts", [])
+            content = piped.get("content", [])
+
+    if not quiet:
+        stderr_console.print(f"[bold]Linking:[/bold] {name} <-> {topic}")
+
     agent = LinkerAgent()
     input_data = LinkerInput(
         target=TargetInput(name=name),
         topic=topic,
         topic_description=topic_description,
-        accounts=[],
-        content=[],
+        accounts=accounts,
+        content=content,
     )
     output = await agent.run(input_data)
 
     if output_format == "json":
-        console.print(output.model_dump_json(indent=2))
+        print(output.model_dump_json(indent=2))
     else:
         if not output.connections:
-            console.print("[yellow]No connections found.[/yellow]")
+            stderr_console.print("[yellow]No connections found.[/yellow]")
             return
         table = Table(show_header=True, header_style="bold")
         table.add_column("Platform")
@@ -381,35 +412,59 @@ async def _link_async(
     default="table",
     help="Output format.",
 )
-def profile_cmd(name: str, output_format: str) -> None:
+@click.option("--input", "input_source", default=None, help="Read JSON from stdin (-) or file.")
+@click.option("--quiet", is_flag=True, help="Suppress non-JSON output.")
+def profile_cmd(name: str, output_format: str, input_source: str | None, quiet: bool) -> None:
     """Build a behavioral profile for a person."""
     try:
-        asyncio.run(_profile_async(name, output_format))
+        asyncio.run(_profile_async(name, output_format, input_source, quiet))
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+        if not quiet:
+            console.print(f"[red]Error: {e}[/red]")
         sys.exit(1)
 
 
-async def _profile_async(name: str, output_format: str) -> None:
+async def _profile_async(
+    name: str,
+    output_format: str,
+    input_source: str | None = None,
+    quiet: bool = False,
+) -> None:
     from rich.tree import Tree
 
     from argus.agents.profiler import ProfilerAgent, ProfilerInput
     from argus.models.target import TargetInput
 
-    console.print(f"[bold]Profiling:[/bold] {name}")
+    stderr_console = Console(stderr=True) if quiet else console
+
+    # Read piped input
+    accounts = []
+    content = []
+    if input_source == "-" or (input_source is None and not sys.stdin.isatty()):
+        import json as json_mod
+
+        stdin_data = sys.stdin.read()
+        if stdin_data.strip():
+            piped = json_mod.loads(stdin_data)
+            accounts = piped.get("accounts", [])
+            content = piped.get("content", [])
+
+    if not quiet:
+        stderr_console.print(f"[bold]Profiling:[/bold] {name}")
+
     agent = ProfilerAgent()
     input_data = ProfilerInput(
         target=TargetInput(name=name),
-        accounts=[],
-        content=[],
+        accounts=accounts,
+        content=content,
     )
     output = await agent.run(input_data)
 
     if output_format == "json":
-        console.print(output.model_dump_json(indent=2))
+        print(output.model_dump_json(indent=2))
     else:
         if not output.dimensions:
-            console.print("[yellow]No profile data available.[/yellow]")
+            stderr_console.print("[yellow]No profile data available.[/yellow]")
             return
         tree = Tree(f"[bold]Profile: {name}[/bold]")
         for dim, topics in output.dimensions.items():
