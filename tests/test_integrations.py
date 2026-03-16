@@ -1,6 +1,7 @@
 """Tests for LangChain and CrewAI integration wrappers.
 
 Tests use mocked imports since langchain-core and crewai are optional deps.
+Uses monkeypatch for sys.modules to ensure cleanup on teardown.
 """
 
 from __future__ import annotations
@@ -8,11 +9,12 @@ from __future__ import annotations
 import importlib
 import sys
 from types import ModuleType
+
 import pytest
 
 
 @pytest.fixture
-def mock_langchain():
+def mock_langchain(monkeypatch):
     """Mock langchain_core so we can test without installing it."""
     mock_module = ModuleType("langchain_core")
     mock_tools = ModuleType("langchain_core.tools")
@@ -28,18 +30,15 @@ def mock_langchain():
     mock_tools.BaseTool = FakeBaseTool
     mock_module.tools = mock_tools
 
-    sys.modules["langchain_core"] = mock_module
-    sys.modules["langchain_core.tools"] = mock_tools
+    monkeypatch.setitem(sys.modules, "langchain_core", mock_module)
+    monkeypatch.setitem(sys.modules, "langchain_core.tools", mock_tools)
     yield
-    # Cleanup
-    sys.modules.pop("langchain_core", None)
-    sys.modules.pop("langchain_core.tools", None)
-    # Force reimport
+    # Force reimport on next use (monkeypatch handles sys.modules cleanup)
     sys.modules.pop("argus.integrations.langchain", None)
 
 
 @pytest.fixture
-def mock_crewai():
+def mock_crewai(monkeypatch):
     """Mock crewai so we can test without installing it."""
     mock_module = ModuleType("crewai")
     mock_tools = ModuleType("crewai.tools")
@@ -53,11 +52,9 @@ def mock_crewai():
     mock_tools.tool = tool
     mock_module.tools = mock_tools
 
-    sys.modules["crewai"] = mock_module
-    sys.modules["crewai.tools"] = mock_tools
+    monkeypatch.setitem(sys.modules, "crewai", mock_module)
+    monkeypatch.setitem(sys.modules, "crewai.tools", mock_tools)
     yield
-    sys.modules.pop("crewai", None)
-    sys.modules.pop("crewai.tools", None)
     sys.modules.pop("argus.integrations.crewai", None)
 
 
@@ -125,19 +122,19 @@ class TestCrewAIIntegration:
 
 
 class TestImportErrors:
-    def test_langchain_import_error_without_dep(self):
+    def test_langchain_import_error_without_dep(self, monkeypatch):
         """Importing langchain wrapper without langchain installed raises ImportError."""
-        # Remove any cached module
-        sys.modules.pop("argus.integrations.langchain", None)
-        sys.modules.pop("langchain_core", None)
-        sys.modules.pop("langchain_core.tools", None)
+        # Ensure clean state
+        monkeypatch.delitem(sys.modules, "argus.integrations.langchain", raising=False)
+        monkeypatch.delitem(sys.modules, "langchain_core", raising=False)
+        monkeypatch.delitem(sys.modules, "langchain_core.tools", raising=False)
         with pytest.raises(ImportError, match="langchain-core"):
             importlib.import_module("argus.integrations.langchain")
 
-    def test_crewai_import_error_without_dep(self):
+    def test_crewai_import_error_without_dep(self, monkeypatch):
         """Importing crewai wrapper without crewai installed raises ImportError."""
-        sys.modules.pop("argus.integrations.crewai", None)
-        sys.modules.pop("crewai", None)
-        sys.modules.pop("crewai.tools", None)
+        monkeypatch.delitem(sys.modules, "argus.integrations.crewai", raising=False)
+        monkeypatch.delitem(sys.modules, "crewai", raising=False)
+        monkeypatch.delitem(sys.modules, "crewai.tools", raising=False)
         with pytest.raises(ImportError, match="crewai"):
             importlib.import_module("argus.integrations.crewai")
