@@ -42,7 +42,7 @@ class ResolverAgent(BaseAgent):
         self._registry = registry or PlatformRegistry()
         self._db = db
 
-    async def run(self, input: AgentInput) -> ResolverOutput:
+    async def _execute(self, input: AgentInput) -> ResolverOutput:
         config = self._config
         target = input.target
         timings: dict[str, float] = {}

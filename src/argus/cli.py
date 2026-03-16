@@ -151,7 +151,7 @@ async def _resolve_async(
         agent_input = AgentInput(target=target)
 
         console.print("[dim]Running resolver pipeline...[/dim]")
-        output = await agent.execute(agent_input)
+        output = await agent.run(agent_input)
 
     await db.close()
     elapsed = time.monotonic() - start_time
