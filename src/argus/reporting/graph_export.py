@@ -88,8 +88,12 @@ def _build_graph(investigation: Investigation) -> nx.DiGraph:
             if topic_id not in topics_added:
                 G.add_node(topic_id, label=conn.content_snippet[:50], node_type="topic")
                 topics_added.add(topic_id)
-            source = f"account:{conn.platform}/{conn.platform}"
-            if G.has_node(source):
+            # Find matching account node for this platform
+            matching_nodes = [
+                n for n in G.nodes
+                if n.startswith(f"account:{conn.platform}/")
+            ]
+            for source in matching_nodes:
                 G.add_edge(
                     source,
                     topic_id,
