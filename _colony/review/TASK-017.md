@@ -47,3 +47,9 @@ Implement a username candidate generator that takes a person's name and produces
 - Max 30 candidates returned
 - Unit tests with diverse name inputs
 - `uv run pytest tests/test_username_generator.py` passes
+
+---
+Claimed-By: alpha-2
+Claimed-At: 2026-03-16T22:34:58+02:00
+Completed-At: 2026-03-16T22:50:15+02:00
+Branch: task/TASK-017
