@@ -1,0 +1,50 @@
+# Argus OSINT Platform — Configuration File
+# Copy to ./argus.toml or ~/.argus/argus.toml
+
+[general]
+default_threshold = 0.45        # Confidence threshold for identity matches
+max_concurrent_requests = 10    # Max parallel HTTP requests
+output_format = "table"         # Default output: table, json, csv
+language = "en"
+
+[platforms.twitter]
+enabled = true
+rate_limit_per_minute = 30
+# credentials = { api_key = "${TWITTER_API_KEY}" }
+
+[platforms.github]
+enabled = true
+rate_limit_per_minute = 30
+
+[proxy]
+# url = "socks5://127.0.0.1:9050"
+# rotation_strategy = "round-robin"   # round-robin, random, sticky
+
+[llm]
+provider = "none"                     # none, openai, anthropic
+# model = "gpt-4o"
+# api_key = "${OPENAI_API_KEY}"
+
+[verification]
+minimum_threshold = 0.30
+photo_matching_enabled = true
+face_recognition_enabled = false
+
+[verification.signal_weights]
+photo = 0.35
+bio = 0.20
+timezone = 0.15
+username = 0.10
+connections = 0.10
+writing_style = 0.10
+
+[output]
+default_format = "table"
+include_raw_data = false
+# report_template = "default"
+
+[stealth]
+user_agent_rotation = true
+min_delay = 2.0
+max_delay = 5.0
+respect_robots_txt = false
