@@ -209,3 +209,248 @@ def _display_table(output, target_name: str, platform_count: int, elapsed: float
         f"\n[bold]Found {len(accounts)} account(s) across "
         f"{len(set(vr.candidate.platform for vr in accounts))} platform(s)[/bold]"
     )
+
+
+# ---------------------------------------------------------------------------
+# argus platforms
+# ---------------------------------------------------------------------------
+
+
+@main.command("platforms")
+def platforms_cmd() -> None:
+    """List all registered platform modules."""
+    from argus.platforms.registry import PlatformRegistry
+
+    registry = PlatformRegistry()
+    registry.discover_platforms()
+    names = registry.list_platforms()
+
+    if not names:
+        console.print("[yellow]No platforms discovered.[/yellow]")
+        return
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Platform")
+    table.add_column("Base URL")
+    table.add_column("Rate Limit")
+    table.add_column("Auth")
+    table.add_column("Playwright")
+    table.add_column("Priority", justify="right")
+
+    for name in sorted(names):
+        cls = registry.get_platform(name)
+        if cls is None:
+            continue
+        table.add_row(
+            cls.name,
+            cls.base_url,
+            f"{cls.rate_limit_per_minute}/min",
+            "yes" if cls.requires_auth else "no",
+            "yes" if cls.requires_playwright else "no",
+            str(cls.priority),
+        )
+
+    console.print(table)
+
+
+# ---------------------------------------------------------------------------
+# argus config
+# ---------------------------------------------------------------------------
+
+
+@main.group("config")
+def config_cmd() -> None:
+    """Manage configuration."""
+
+
+@config_cmd.command("show")
+def config_show() -> None:
+    """Display the current configuration."""
+    from argus.config import load_config
+
+    config = load_config()
+    console.print(config.model_dump_json(indent=2))
+
+
+@config_cmd.command("path")
+def config_path() -> None:
+    """Show configuration file search paths."""
+    from pathlib import Path
+
+    paths = [
+        Path("argus.toml"),
+        Path.home() / ".argus" / "argus.toml",
+    ]
+    for p in paths:
+        status = "[green]found[/green]" if p.exists() else "[dim]not found[/dim]"
+        console.print(f"  {p} — {status}")
+
+
+@config_cmd.command("init")
+def config_init() -> None:
+    """Create a default argus.toml in the current directory."""
+    from pathlib import Path
+
+    target = Path("argus.toml")
+    if target.exists():
+        console.print("[yellow]argus.toml already exists.[/yellow]")
+        return
+
+    example = Path("argus.toml.example")
+    if example.exists():
+        target.write_text(example.read_text())
+    else:
+        target.write_text("[general]\ndefault_threshold = 0.45\n")
+    console.print(f"[green]Created {target}[/green]")
+
+
+# ---------------------------------------------------------------------------
+# argus link
+# ---------------------------------------------------------------------------
+
+
+@main.command("link")
+@click.argument("name")
+@click.option("--topic", required=True, help="Topic to find connections for.")
+@click.option("--topic-description", default=None, help="Extended topic description.")
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format.",
+)
+def link_cmd(name: str, topic: str, topic_description: str | None, output_format: str) -> None:
+    """Find connections between a person and a topic."""
+    try:
+        asyncio.run(_link_async(name, topic, topic_description, output_format))
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+async def _link_async(
+    name: str, topic: str, topic_description: str | None, output_format: str
+) -> None:
+    from argus.agents.linker import LinkerAgent, LinkerInput
+    from argus.models.target import TargetInput
+
+    console.print(f"[bold]Linking:[/bold] {name} <-> {topic}")
+    agent = LinkerAgent()
+    input_data = LinkerInput(
+        target=TargetInput(name=name),
+        topic=topic,
+        topic_description=topic_description,
+        accounts=[],
+        content=[],
+    )
+    output = await agent.run(input_data)
+
+    if output_format == "json":
+        console.print(output.model_dump_json(indent=2))
+    else:
+        if not output.connections:
+            console.print("[yellow]No connections found.[/yellow]")
+            return
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Platform")
+        table.add_column("Type")
+        table.add_column("Confidence", justify="right")
+        table.add_column("Snippet")
+        for conn in output.connections:
+            table.add_row(
+                conn.platform,
+                conn.relationship_type,
+                f"{conn.confidence:.0%}",
+                conn.content_snippet[:80],
+            )
+        console.print(table)
+
+
+# ---------------------------------------------------------------------------
+# argus profile
+# ---------------------------------------------------------------------------
+
+
+@main.command("profile")
+@click.argument("name")
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format.",
+)
+def profile_cmd(name: str, output_format: str) -> None:
+    """Build a behavioral profile for a person."""
+    try:
+        asyncio.run(_profile_async(name, output_format))
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+async def _profile_async(name: str, output_format: str) -> None:
+    from rich.tree import Tree
+
+    from argus.agents.profiler import ProfilerAgent, ProfilerInput
+    from argus.models.target import TargetInput
+
+    console.print(f"[bold]Profiling:[/bold] {name}")
+    agent = ProfilerAgent()
+    input_data = ProfilerInput(
+        target=TargetInput(name=name),
+        accounts=[],
+        content=[],
+    )
+    output = await agent.run(input_data)
+
+    if output_format == "json":
+        console.print(output.model_dump_json(indent=2))
+    else:
+        if not output.dimensions:
+            console.print("[yellow]No profile data available.[/yellow]")
+            return
+        tree = Tree(f"[bold]Profile: {name}[/bold]")
+        for dim, topics in output.dimensions.items():
+            branch = tree.add(f"[bold]{dim.capitalize()}[/bold]")
+            for topic in topics[:10]:
+                topic_node = branch.add(f"{topic.topic} (score: {topic.score:.2f}, {topic.trend})")
+                for ev in topic.evidence[:3]:
+                    topic_node.add(f"[dim]{ev}[/dim]")
+        console.print(tree)
+
+
+# ---------------------------------------------------------------------------
+# argus report
+# ---------------------------------------------------------------------------
+
+
+@main.command("report")
+@click.argument("name")
+@click.option(
+    "--format",
+    "report_format",
+    type=click.Choice(["json", "markdown"]),
+    default="json",
+    help="Report format.",
+)
+@click.option("--output", "output_file", default=None, help="Output file path.")
+def report_cmd(name: str, report_format: str, output_file: str | None) -> None:
+    """Generate a report from stored investigation results."""
+    console.print(f"[bold]Report:[/bold] {name} ({report_format})")
+
+    if report_format == "markdown":
+        content = f"# Investigation Report: {name}\n\n_No stored data available._\n"
+    else:
+        import json as json_mod
+
+        content = json_mod.dumps({"target": name, "status": "no stored data"}, indent=2)
+
+    if output_file:
+        from pathlib import Path
+
+        Path(output_file).write_text(content)
+        console.print(f"[green]Report saved to {output_file}[/green]")
+    else:
+        console.print(content)
