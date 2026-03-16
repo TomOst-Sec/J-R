@@ -1,6 +1,6 @@
-"""Argus data models — re-exports all model classes."""
+"""Core Pydantic data models for Argus OSINT platform."""
 
-from .agent import (
+from argus.models.agent import (
     AgentInput,
     AgentOutput,
     Connection,
@@ -9,10 +9,10 @@ from .agent import (
     ResolverOutput,
     TopicScore,
 )
-from .investigation import Investigation
-from .profile import CandidateProfile, ContentItem, ProfileData
-from .target import Target, TargetInput
-from .verification import SignalResult, VerificationResult
+from argus.models.investigation import Investigation
+from argus.models.profile import CandidateProfile, ContentItem, ProfileData
+from argus.models.target import Target, TargetInput
+from argus.models.verification import SignalResult, VerificationResult
 
 __all__ = [
     "AgentInput",
