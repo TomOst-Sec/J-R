@@ -48,3 +48,9 @@ Implement the Reddit platform module using the public JSON API (append `.json` t
 - Unit tests with mocked HTTP responses
 - Tests cover: user exists, user not found, suspended user, profile scrape, content scrape
 - `uv run pytest tests/test_platform_reddit.py` passes
+
+---
+Claimed-By: alpha-2
+Claimed-At: 2026-03-16T22:53:22+02:00
+Completed-At: 2026-03-16T22:53:22+02:00
+Branch: task/TASK-008-alpha2
