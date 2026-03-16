@@ -18,3 +18,18 @@ htmlcov/
 .coverage
 *.log
 .DS_Store
+
+# Colony mutable state — must NOT be in git
+# (agents share filesystem, git tracking causes split-brain duplicates)
+_colony/queue/
+_colony/active/
+_colony/review/
+_colony/done/
+_colony/bugs/
+_colony/locks/
+_colony/logs/
+_colony/context/
+_colony/mailbox/
+_colony/plans/
+_colony/memory/
+_colony/index/
