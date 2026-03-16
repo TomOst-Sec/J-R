@@ -31,11 +31,16 @@ def create_stealth_session(config: ArgusConfig) -> aiohttp.ClientSession:
         "Upgrade-Insecure-Requests": "1",
     }
 
-    connector = None
     if config.proxy.url:
         from aiohttp_socks import ProxyConnector
 
         connector = ProxyConnector.from_url(config.proxy.url)
+    else:
+        connector = aiohttp.TCPConnector(
+            limit=50,
+            limit_per_host=10,
+            enable_cleanup_closed=True,
+        )
 
     timeout = aiohttp.ClientTimeout(total=30)
 
