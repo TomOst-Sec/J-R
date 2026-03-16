@@ -47,6 +47,13 @@ CREATE TABLE IF NOT EXISTS content (
     url TEXT,
     metadata TEXT
 );
+
+CREATE TABLE IF NOT EXISTS platform_progress (
+    investigation_id TEXT NOT NULL REFERENCES investigations(id),
+    platform TEXT NOT NULL,
+    completed_at TEXT NOT NULL,
+    PRIMARY KEY (investigation_id, platform)
+);
 """
 
 

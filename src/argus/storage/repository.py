@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -106,6 +107,88 @@ class InvestigationRepository:
         await conn.execute("DELETE FROM investigations WHERE id = ?", (investigation_id,))
         await conn.execute("DELETE FROM targets WHERE id = ?", (target_id,))
         await conn.commit()
+
+
+    async def get_or_create_investigation(
+        self, target_input: TargetInput
+    ) -> tuple[dict, bool]:
+        """Get existing or create new investigation with deterministic ID.
+
+        Returns (investigation_dict, is_new).
+        """
+        inv_id = _deterministic_id(target_input)
+        existing = await self.get_investigation(inv_id)
+        if existing is not None:
+            return existing, False
+
+        target_id = str(uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+
+        conn = self._db.conn
+        await conn.execute(
+            "INSERT INTO targets (id, name, location, seed_urls, email, username_hint, phone, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                target_id,
+                target_input.name,
+                target_input.location,
+                json.dumps(target_input.seed_urls),
+                target_input.email,
+                target_input.username_hint,
+                target_input.phone,
+                now,
+            ),
+        )
+        await conn.execute(
+            "INSERT INTO investigations (id, target_id, status, created_at, updated_at) "
+            "VALUES (?, ?, 'running', ?, ?)",
+            (inv_id, target_id, now, now),
+        )
+        await conn.commit()
+
+        result = await self.get_investigation(inv_id)
+        return result, True  # type: ignore[return-value]
+
+    async def get_scraped_platforms(self, investigation_id: str) -> set[str]:
+        """Get the set of platforms already scraped for this investigation."""
+        conn = self._db.conn
+        rows = await conn.execute_fetchall(
+            "SELECT platform FROM platform_progress WHERE investigation_id = ?",
+            (investigation_id,),
+        )
+        return {r["platform"] for r in rows}
+
+    async def mark_platform_complete(
+        self, investigation_id: str, platform: str
+    ) -> None:
+        """Mark a platform as completed for this investigation."""
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._db.conn
+        await conn.execute(
+            "INSERT OR IGNORE INTO platform_progress (investigation_id, platform, completed_at) "
+            "VALUES (?, ?, ?)",
+            (investigation_id, platform, now),
+        )
+        await conn.commit()
+
+    async def purge_old_investigations(self, max_age_days: int = 90) -> int:
+        """Delete investigations older than max_age_days. Returns count deleted."""
+        conn = self._db.conn
+        rows = await conn.execute_fetchall(
+            "SELECT id FROM investigations WHERE created_at < datetime('now', ?)",
+            (f"-{max_age_days} days",),
+        )
+        count = 0
+        for r in rows:
+            await self.delete_investigation(r["id"])
+            count += 1
+        return count
+
+
+def _deterministic_id(target: TargetInput) -> str:
+    """Generate a deterministic investigation ID from target input."""
+    key = f"{target.name}|{target.location}|{sorted(target.seed_urls)}"
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
 class AccountRepository:
