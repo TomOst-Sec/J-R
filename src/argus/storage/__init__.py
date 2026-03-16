@@ -1,0 +1,1 @@
+"""Argus storage module."""
