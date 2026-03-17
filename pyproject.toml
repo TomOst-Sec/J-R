@@ -39,13 +39,20 @@ Homepage = "https://github.com/TomOst-Sec/J-R"
 Repository = "https://github.com/TomOst-Sec/J-R"
 
 [project.optional-dependencies]
-playwright = ["playwright"]
+playwright = ["camoufox[geoip]"]
 face = ["face-recognition", "dlib"]
 llm = ["openai", "tiktoken"]
 api = ["fastapi", "uvicorn", "websockets"]
 mcp = ["mcp"]
 encrypted = ["sqlcipher3"]
-all = ["playwright", "openai", "tiktoken", "fastapi", "uvicorn", "websockets", "mcp"]
+intel = ["shodan", "aiodns", "python-whois", "phonenumbers"]
+all = [
+    "camoufox[geoip]",
+    "openai", "tiktoken",
+    "fastapi", "uvicorn", "websockets",
+    "mcp",
+    "shodan", "aiodns", "python-whois", "phonenumbers",
+]
 
 [project.scripts]
 argus = "argus.cli:main"

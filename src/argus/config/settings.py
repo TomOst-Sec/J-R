@@ -86,6 +86,31 @@ class StealthConfig(BaseModel):
     min_delay: float = 2.0
     max_delay: float = 5.0
     respect_robots_txt: bool = False
+    browser_engine: str = "camoufox"
+    headless: bool = True
+    humanize: bool | float = True
+    block_images: bool = True
+    target_os: list[str] | None = None
+    geoip: bool = True
+
+
+class IntelConfig(BaseModel):
+    """Intelligence source settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    hibp_api_key: str | None = None
+    shodan_api_key: str | None = None
+    hunter_api_key: str | None = None
+    virustotal_api_key: str | None = None
+    intelx_api_key: str | None = None
+    securitytrails_api_key: str | None = None
+    leakcheck_api_key: str | None = None
+    numverify_api_key: str | None = None
+    enable_breach_check: bool = True
+    enable_domain_intel: bool = True
+    enable_email_intel: bool = True
+    enable_phone_intel: bool = True
 
 
 class ArgusConfig(BaseModel):
@@ -100,3 +125,4 @@ class ArgusConfig(BaseModel):
     verification: VerificationConfig = Field(default_factory=VerificationConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
     stealth: StealthConfig = Field(default_factory=StealthConfig)
+    intel: IntelConfig = Field(default_factory=IntelConfig)

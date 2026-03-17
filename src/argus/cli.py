@@ -39,6 +39,8 @@ def main() -> None:
 @click.option("--platforms", default=None, help="Comma-separated list of platforms to check.")
 @click.option("--config", "config_path", type=click.Path(exists=True), default=None, help="Path to argus.toml.")
 @click.option("--verbose", is_flag=True, help="Enable debug output.")
+@click.option("--no-browser", is_flag=True, help="Skip browser automation (HTTP-only mode).")
+@click.option("--headful", is_flag=True, help="Run browser in visible mode for debugging.")
 def resolve(
     name: str,
     location: str | None,
@@ -51,6 +53,8 @@ def resolve(
     platforms: str | None,
     config_path: str | None,
     verbose: bool,
+    no_browser: bool,
+    headful: bool,
 ) -> None:
     """Resolve a person across social media platforms."""
     try:
@@ -66,6 +70,8 @@ def resolve(
             platforms=platforms,
             config_path=config_path,
             verbose=verbose,
+            no_browser=no_browser,
+            headful=headful,
         ))
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted.[/yellow]")
@@ -89,8 +95,10 @@ async def _resolve_async(
     platforms: str | None,
     config_path: str | None,
     verbose: bool,
+    no_browser: bool = False,
+    headful: bool = False,
 ) -> None:
-    import aiohttp
+    from contextlib import asynccontextmanager
 
     from argus.agents.resolver import ResolverAgent
     from argus.config import load_config
@@ -98,6 +106,7 @@ async def _resolve_async(
     from argus.models.agent import AgentInput
     from argus.models.target import TargetInput
     from argus.platforms.registry import PlatformRegistry
+    from argus.stealth.session import create_stealth_session
     from argus.storage.database import Database
 
     # Load config
@@ -108,6 +117,10 @@ async def _resolve_async(
 
     if threshold is not None:
         config.verification.minimum_threshold = threshold
+    if headful:
+        config.stealth.headless = False
+    if no_browser:
+        config.stealth.browser_engine = "none"
 
     # Discover platforms
     registry = PlatformRegistry()
@@ -143,16 +156,48 @@ async def _resolve_async(
 
     start_time = time.monotonic()
 
+    # Check if any enabled platform needs a browser
+    enabled_platforms = registry.get_enabled_platforms(config)
+    needs_browser = (
+        config.stealth.browser_engine != "none"
+        and any(cls.requires_playwright for cls in enabled_platforms)
+    )
+
+    # Async context helper for optional browser manager
+    @asynccontextmanager
+    async def _optional_browser():
+        if needs_browser:
+            try:
+                from argus.stealth.browser_manager import BrowserManager
+                async with BrowserManager(config) as mgr:
+                    yield mgr
+            except ImportError:
+                if not is_json:
+                    console.print(
+                        "[yellow]camoufox not installed — browser platforms will use HTTP fallback[/yellow]"
+                    )
+                yield None
+            except Exception as exc:
+                if not is_json:
+                    console.print(
+                        f"[yellow]Browser launch failed ({exc}) — using HTTP fallback[/yellow]"
+                    )
+                yield None
+        else:
+            yield None
+
     # Run resolver with progress display
     db = Database()
     await db.initialize()
 
-    async with aiohttp.ClientSession() as session:
+    session = create_stealth_session(config)
+    async with session, _optional_browser() as browser_mgr:
         agent = ResolverAgent(
             session=session,
             config=config,
             registry=registry,
             db=db,
+            browser=browser_mgr,
         )
         agent_input = AgentInput(target=target)
 
@@ -570,6 +615,399 @@ def report_cmd(name: str, report_format: str, output_file: str | None) -> None:
         console.print(f"[green]Report saved to {output_file}[/green]")
     else:
         console.print(content)
+
+
+# ---------------------------------------------------------------------------
+# argus intel
+# ---------------------------------------------------------------------------
+
+
+@main.group("intel")
+def intel_cmd() -> None:
+    """Intelligence gathering commands."""
+
+
+@intel_cmd.command("email")
+@click.argument("email")
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format.",
+)
+@click.option("--config", "config_path", type=click.Path(exists=True), default=None, help="Path to argus.toml.")
+def intel_email(email: str, output_format: str, config_path: str | None) -> None:
+    """Investigate an email address."""
+    try:
+        asyncio.run(_intel_email_async(email, output_format, config_path))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted.[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+async def _intel_email_async(email: str, output_format: str, config_path: str | None) -> None:
+    from argus.config import load_config
+    from argus.config.settings import ArgusConfig
+    from argus.intel.email import EmailIntelModule
+    from argus.stealth.session import create_stealth_session
+
+    config = load_config(config_path) if config_path else ArgusConfig()
+    session = create_stealth_session(config)
+
+    async with session:
+        module = EmailIntelModule(session, config)
+        report = await module.investigate(email)
+
+    if output_format == "json":
+        console.print(report.model_dump_json(indent=2))
+    else:
+        console.print(f"\n[bold]Email Report:[/bold] {email}\n")
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Field")
+        table.add_column("Value")
+        table.add_row("Deliverable", str(report.is_deliverable))
+        table.add_row("Gravatar", report.gravatar_url or "Not found")
+        table.add_row("MX Records", ", ".join(report.mx_records) if report.mx_records else "None")
+        table.add_row("PGP Keys", str(len(report.pgp_keys)))
+        table.add_row("Breaches", str(len(report.breaches)))
+        console.print(table)
+
+        if report.breaches:
+            console.print("\n[bold]Breaches:[/bold]")
+            breach_table = Table(show_header=True, header_style="bold")
+            breach_table.add_column("Name")
+            breach_table.add_column("Domain")
+            breach_table.add_column("Data Types")
+            breach_table.add_column("Verified")
+            for b in report.breaches:
+                breach_table.add_row(
+                    b.breach_name,
+                    b.domain or "",
+                    ", ".join(b.data_types[:5]),
+                    "[green]yes[/green]" if b.is_verified else "[red]no[/red]",
+                )
+            console.print(breach_table)
+
+
+@intel_cmd.command("phone")
+@click.argument("phone_number")
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format.",
+)
+def intel_phone(phone_number: str, output_format: str) -> None:
+    """Investigate a phone number."""
+    try:
+        asyncio.run(_intel_phone_async(phone_number, output_format))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted.[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+async def _intel_phone_async(phone_number: str, output_format: str) -> None:
+    import json as json_mod
+
+    from argus.config.settings import ArgusConfig
+    from argus.intel.phone import PhoneIntelModule
+    from argus.stealth.session import create_stealth_session
+
+    config = ArgusConfig()
+    session = create_stealth_session(config)
+
+    async with session:
+        module = PhoneIntelModule(session, config)
+        metadata, intel_results = await module.investigate(phone_number)
+
+    if output_format == "json":
+        console.print(metadata.model_dump_json(indent=2))
+    else:
+        console.print(f"\n[bold]Phone Report:[/bold] {phone_number}\n")
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Field")
+        table.add_column("Value")
+        table.add_row("Formatted", metadata.number)
+        table.add_row("Valid", "[green]yes[/green]" if metadata.is_valid else "[red]no[/red]")
+        table.add_row("Country", metadata.country or "Unknown")
+        table.add_row("Country Code", metadata.country_code or "Unknown")
+        table.add_row("Carrier", metadata.carrier or "Unknown")
+        table.add_row("Line Type", metadata.line_type or "Unknown")
+        table.add_row("Region", metadata.region or "Unknown")
+        console.print(table)
+
+
+@intel_cmd.command("domain")
+@click.argument("domain")
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format.",
+)
+@click.option("--config", "config_path", type=click.Path(exists=True), default=None, help="Path to argus.toml.")
+def intel_domain(domain: str, output_format: str, config_path: str | None) -> None:
+    """Investigate a domain."""
+    try:
+        asyncio.run(_intel_domain_async(domain, output_format, config_path))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted.[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+async def _intel_domain_async(domain: str, output_format: str, config_path: str | None) -> None:
+    from argus.config import load_config
+    from argus.config.settings import ArgusConfig
+    from argus.intel.domain import DomainIntelModule
+    from argus.stealth.session import create_stealth_session
+
+    config = load_config(config_path) if config_path else ArgusConfig()
+    session = create_stealth_session(config)
+
+    async with session:
+        module = DomainIntelModule(session, config)
+        report = await module.investigate(domain)
+
+    if output_format == "json":
+        console.print(report.model_dump_json(indent=2))
+    else:
+        console.print(f"\n[bold]Domain Report:[/bold] {domain}\n")
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Field")
+        table.add_column("Value")
+
+        if report.whois:
+            table.add_row("Registrar", report.whois.registrar or "Unknown")
+            table.add_row("Registrant", report.whois.registrant or "Unknown")
+            table.add_row("Created", str(report.whois.creation_date or "Unknown"))
+            table.add_row("Expires", str(report.whois.expiry_date or "Unknown"))
+            table.add_row("Nameservers", ", ".join(report.whois.nameservers) if report.whois.nameservers else "None")
+
+        if report.dns:
+            table.add_row("A Records", ", ".join(report.dns.a) if report.dns.a else "None")
+            table.add_row("MX Records", ", ".join(str(mx) for mx in report.dns.mx) if report.dns.mx else "None")
+            table.add_row("NS Records", ", ".join(report.dns.ns) if report.dns.ns else "None")
+
+        table.add_row("Subdomains", str(len(report.subdomains)))
+        table.add_row("Certificates", str(len(report.certificates)))
+        table.add_row("Wayback Snapshots", str(report.wayback_snapshots or 0))
+        console.print(table)
+
+
+@intel_cmd.command("breach")
+@click.argument("email")
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format.",
+)
+@click.option("--config", "config_path", type=click.Path(exists=True), default=None, help="Path to argus.toml.")
+def intel_breach(email: str, output_format: str, config_path: str | None) -> None:
+    """Check an email against breach databases."""
+    try:
+        asyncio.run(_intel_breach_async(email, output_format, config_path))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted.[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+async def _intel_breach_async(email: str, output_format: str, config_path: str | None) -> None:
+    from argus.config import load_config
+    from argus.config.settings import ArgusConfig
+    from argus.intel.email import EmailIntelModule
+    from argus.stealth.session import create_stealth_session
+
+    config = load_config(config_path) if config_path else ArgusConfig()
+    session = create_stealth_session(config)
+
+    async with session:
+        module = EmailIntelModule(session, config)
+        report = await module.investigate(email)
+
+    if output_format == "json":
+        import json as json_mod
+
+        breach_data = [b.model_dump(mode="json") for b in report.breaches]
+        console.print(json_mod.dumps({"email": email, "breaches": breach_data}, indent=2))
+    else:
+        console.print(f"\n[bold]Breach Check:[/bold] {email}\n")
+        if not report.breaches:
+            console.print("[green]No breaches found.[/green]")
+            return
+        console.print(f"[red]Found in {len(report.breaches)} breach(es):[/red]\n")
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Breach")
+        table.add_column("Domain")
+        table.add_column("Data Types")
+        table.add_column("Verified")
+        for b in report.breaches:
+            table.add_row(
+                b.breach_name,
+                b.domain or "",
+                ", ".join(b.data_types[:5]),
+                "[green]yes[/green]" if b.is_verified else "[red]no[/red]",
+            )
+        console.print(table)
+
+
+@intel_cmd.command("image")
+@click.argument("url")
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format.",
+)
+def intel_image(url: str, output_format: str) -> None:
+    """Analyze an image URL."""
+    try:
+        asyncio.run(_intel_image_async(url, output_format))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted.[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+async def _intel_image_async(url: str, output_format: str) -> None:
+    import json as json_mod
+
+    from argus.config.settings import ArgusConfig
+    from argus.intel.image import ImageIntelModule
+    from argus.stealth.session import create_stealth_session
+
+    config = ArgusConfig()
+    session = create_stealth_session(config)
+
+    async with session:
+        module = ImageIntelModule(session, config)
+        result = await module.investigate(url)
+
+    if output_format == "json":
+        console.print(json_mod.dumps(result, indent=2, default=str))
+    else:
+        console.print(f"\n[bold]Image Analysis:[/bold] {url}\n")
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Field")
+        table.add_column("Value")
+        table.add_row("Perceptual Hash", result.get("perceptual_hash") or "N/A")
+        table.add_row("EXIF Fields", str(len(result.get("exif", {}))))
+        if result.get("error"):
+            table.add_row("Error", f"[red]{result['error']}[/red]")
+        console.print(table)
+
+        exif = result.get("exif", {})
+        if exif:
+            console.print("\n[bold]EXIF Data:[/bold]")
+            exif_table = Table(show_header=True, header_style="bold")
+            exif_table.add_column("Tag")
+            exif_table.add_column("Value")
+            for tag, val in list(exif.items())[:20]:
+                exif_table.add_row(str(tag), str(val)[:100])
+            console.print(exif_table)
+
+
+# ---------------------------------------------------------------------------
+# argus correlate
+# ---------------------------------------------------------------------------
+
+
+@main.command("correlate")
+@click.argument("name")
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format.",
+)
+@click.option("--config", "config_path", type=click.Path(exists=True), default=None, help="Path to argus.toml.")
+def correlate_cmd(name: str, output_format: str, config_path: str | None) -> None:
+    """Full correlation across all sources for a person."""
+    try:
+        asyncio.run(_correlate_async(name, output_format, config_path))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted.[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+async def _correlate_async(name: str, output_format: str, config_path: str | None) -> None:
+    import json as json_mod
+
+    from argus.config import load_config
+    from argus.config.settings import ArgusConfig
+    from argus.intel.correlator import CorrelationEngine
+
+    config = load_config(config_path) if config_path else ArgusConfig()
+
+    # Read piped input if available
+    accounts: list[dict] = []
+    intel_results = []
+    if not sys.stdin.isatty():
+        stdin_data = sys.stdin.read()
+        if stdin_data.strip():
+            piped = json_mod.loads(stdin_data)
+            accounts = piped.get("accounts", [])
+
+    console.print(f"[bold]Correlating:[/bold] {name}")
+
+    engine = CorrelationEngine()
+    cluster = await engine.correlate(name, accounts, intel_results)
+
+    if output_format == "json":
+        console.print(cluster.model_dump_json(indent=2))
+    else:
+        console.print(f"\n[bold]Identity Cluster:[/bold] {cluster.cluster_id}\n")
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Field")
+        table.add_column("Value")
+        table.add_row("Names", ", ".join(cluster.names))
+        table.add_row("Usernames", ", ".join(cluster.usernames) if cluster.usernames else "None")
+        table.add_row("Emails", ", ".join(cluster.emails) if cluster.emails else "None")
+        table.add_row("Accounts", str(len(cluster.accounts)))
+        table.add_row("Confidence", f"{cluster.confidence:.0%}")
+        console.print(table)
+
+        if cluster.evidence:
+            console.print("\n[bold]Evidence:[/bold]")
+            for ev in cluster.evidence:
+                console.print(f"  - {ev}")
+
+        if cluster.timeline:
+            console.print("\n[bold]Timeline:[/bold]")
+            timeline_table = Table(show_header=True, header_style="bold")
+            timeline_table.add_column("Timestamp")
+            timeline_table.add_column("Source")
+            timeline_table.add_column("Event")
+            for entry in cluster.timeline[:20]:
+                timeline_table.add_row(
+                    entry.get("timestamp", ""),
+                    entry.get("source", ""),
+                    entry.get("event", ""),
+                )
+            console.print(timeline_table)
 
 
 # ---------------------------------------------------------------------------
