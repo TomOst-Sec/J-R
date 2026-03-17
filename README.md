@@ -1,146 +1,211 @@
-# Argus OSINT
+<div align="center">
 
-Multi-agent OSINT platform for cross-platform identity resolution, verification, and behavioral profiling.
+# 👁️ ARGUS
 
-Argus takes a person's name — plus optional signals like location, known URLs, email, or username — and discovers, verifies, and profiles that person across 13+ social media platforms. Unlike simple username checkers, Argus uses cross-platform signal correlation (bio similarity, profile photo hashing, timezone analysis, username patterns) to assign confidence scores and filter false positives.
+### The All-Seeing OSINT Platform
 
-## Quick Start
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Platforms](https://img.shields.io/badge/platforms-64-blueviolet?style=for-the-badge)](#-64-platforms)
+[![Intel Sources](https://img.shields.io/badge/intel%20sources-19-orange?style=for-the-badge)](#-intelligence-sources)
+[![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
+
+**Identity resolution · Breach intelligence · Domain recon · Behavioral profiling**
+
+Give Argus a name, email, phone, or domain — it fans out across **64 platforms** and **19 intelligence sources**, cross-correlates everything, and hands you a confidence-scored dossier.
+
+---
+
+</div>
+
+## ⚡ 30-Second Start
 
 ```bash
-pip install argus-osint
-argus resolve "John Doe" --location "San Francisco"
+pip install argus-osint          # or: uv add argus-osint
+argus resolve "Linus Torvalds"   # find accounts across 64 platforms
 ```
 
-Or with UV:
-
-```bash
-uvx argus-osint resolve "John Doe"
+```
+┌──────────┬──────────────┬─────────────────────────────────┬────────────┬───────────┐
+│ Platform │ Username     │ URL                             │ Confidence │ Label     │
+├──────────┼──────────────┼─────────────────────────────────┼────────────┼───────────┤
+│ github   │ torvalds     │ https://github.com/torvalds     │     92%    │ confirmed │
+│ gitlab   │ torvalds     │ https://gitlab.com/torvalds     │     78%    │ likely    │
+│ keybase  │ torvalds     │ https://keybase.io/torvalds     │     85%    │ confirmed │
+│ reddit   │ torvalds     │ https://reddit.com/u/torvalds   │     45%    │ possible  │
+└──────────┴──────────────┴─────────────────────────────────┴────────────┴───────────┘
 ```
 
-## Features
+---
 
-- **Identity Resolution** — discover accounts across 13+ platforms using username generation, name search, and seed URL matching
-- **Confidence Scoring** — multi-signal verification engine with weighted scoring (photo hash, bio similarity, username patterns, timezone)
-- **Behavioral Profiling** — TF-IDF topic extraction, dimension classification (professional/personal/public), temporal trends
-- **Topic Linking** — find connections between a target and specific topics, organizations, or interests
-- **Rich CLI** — table output, JSON output, progress bars, and report generation
-- **REST API** — FastAPI server with OpenAPI docs, WebSocket streaming, bearer token auth
-- **MCP Server** — Model Context Protocol integration for Claude Code and other AI assistants
-- **Plugin Architecture** — add new platforms by implementing a single abstract class
-
-## Platform Support
-
-| Platform | Username Check | Name Search | Profile Scrape | Content Scrape |
-|----------|:-:|:-:|:-:|:-:|
-| GitHub | Y | Y | Y | Y (repos) |
-| Reddit | Y | - | Y | Y (posts/comments) |
-| HackerNews | Y | - | Y | Y (stories) |
-| Twitter/X | Y | - | Y | - |
-| LinkedIn | Y | Y | Y | - |
-| Instagram | Y | - | Y | - |
-| Facebook | - | Y (dork) | - | - |
-| YouTube | Y | Y | Y | - |
-| Mastodon | Y | - | Y | - |
-| Stack Overflow | Y | Y | Y | - |
-| Medium | Y | - | Y | - |
-| TikTok | Y | - | Y | - |
-| Telegram | Y | - | - | - |
-
-## Installation
-
-Requires Python 3.12+.
+## 🔥 What Can Argus Do?
 
 ```bash
-# Core install
-pip install argus-osint
+# 🔍 Find someone across 64 platforms
+argus resolve "Jane Doe" --location "NYC" --email jane@example.com
 
-# With optional extras
-pip install argus-osint[api]         # REST API server (FastAPI + Uvicorn)
-pip install argus-osint[playwright]  # Browser automation for JS-rendered platforms
-pip install argus-osint[face]        # Face recognition for photo matching
-pip install argus-osint[llm]         # LLM integration (OpenAI)
-```
+# 📧 Investigate an email — breaches, PGP keys, Gravatar, linked accounts
+argus intel email "john@example.com"
 
-### Development
+# 🌐 Recon a domain — WHOIS, DNS, certs, subdomains, Wayback history
+argus intel domain "example.com"
 
-```bash
-git clone https://github.com/TomOst-Sec/J-R.git
-cd J-R
-uv sync --group dev
-uv run pytest          # Run tests
-uv run ruff check src/ # Lint
-```
+# 📱 Phone lookup — carrier, country, line type, validation
+argus intel phone "+1-555-123-4567"
 
-## Usage
+# 💀 Breach check — Have I Been Pwned, LeakCheck, IntelX
+argus intel breach "john@example.com"
 
-### Resolve a person
+# 🖼️ Image analysis — perceptual hash, EXIF extraction
+argus intel image "https://example.com/photo.jpg"
 
-```bash
-# Table output (default)
-argus resolve "John Doe" --location "San Francisco"
+# 🕸️ Full correlation — cross-reference everything
+argus correlate "John Doe"
 
-# JSON output
-argus resolve "John Doe" --output json
-
-# With seed URL and username hint
-argus resolve "John Doe" --seed-url https://github.com/johndoe --username-hint johndoe
-
-# Restrict to specific platforms
-argus resolve "John Doe" --platforms github,reddit,hackernews
-```
-
-### Link topics
-
-```bash
-argus link "John Doe" --topic "machine learning"
-argus link "John Doe" --topic "Acme Corp" --topic-description "Technology company in SF"
-```
-
-### Build profile
-
-```bash
+# 🧠 Behavioral profiling — interests, activity patterns, writing style
 argus profile "John Doe"
-argus profile "John Doe" --output json
-```
 
-### Generate reports
+# 🔗 Topic linking — find connections to orgs, topics, interests
+argus link "John Doe" --topic "machine learning"
 
-```bash
+# 📄 Generate reports
 argus report "John Doe" --format markdown --output report.md
-argus report "John Doe" --format json
 ```
 
-### List platforms
+---
+
+## 🌍 64 Platforms
+
+<table>
+<tr>
+<td>
+
+**🔧 Developer**
+- GitHub
+- GitLab
+- Bitbucket
+- Codeberg
+- Stack Overflow
+- HackerNews
+- Keybase
+- npm
+- PyPI
+- crates.io
+- RubyGems
+- Docker Hub
+- Kaggle
+
+</td>
+<td>
+
+**📱 Social**
+- Twitter/X
+- Instagram
+- Facebook
+- LinkedIn
+- Reddit
+- Mastodon
+- Bluesky
+- Threads
+- TikTok
+- Snapchat
+- Pinterest
+- Tumblr
+- VK
+
+</td>
+<td>
+
+**🎬 Media**
+- YouTube
+- Twitch
+- Spotify
+- SoundCloud
+- Odysee
+- Rumble
+- PeerTube
+- DeviantArt
+- Behance
+- Dribbble
+- 500px
+- Flickr
+
+</td>
+<td>
+
+**🌐 Other**
+- Linktree
+- Substack
+- Medium
+- Patreon
+- BuyMeACoffee
+- About.me
+- Steam
+- Lichess
+- Chess.com
+- Goodreads
+- Wikipedia
+- Wikidata
+- Telegram
+- Discord
+- Trello
+- Strava
+- Quora
+- Nostr
+- Matrix
+- Pixelfed
+- Gab
+- Minds
+- HackTheBox
+- TryHackMe
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🕵️ Intelligence Sources
+
+| Category | Sources | What You Get |
+|:--------:|---------|:-------------|
+| 💀 **Breach** | Have I Been Pwned · LeakCheck · IntelX | Breached credentials, exposed data types |
+| 🌐 **Domain** | WHOIS · DNS · crt.sh · SecurityTrails | Registration, records, certs, subdomains |
+| 🔒 **Network** | Shodan · VirusTotal · Wayback Machine | Open ports, threat intel, historical snapshots |
+| 🪪 **Identity** | PGP Keyservers · Hunter.io · Libravatar · Gravatar | Keys, email verification, avatars |
+| 📋 **Records** | OpenCorporates · OCCRP Aleph · Google Dorking | Corporate filings, investigations, targeted queries |
+| 📞 **Comms** | Email Validation · Phone Lookup · Paste Search | MX checks, carrier info, paste exposure |
+
+---
+
+## 📦 Install
 
 ```bash
-argus platforms
+pip install argus-osint                  # core
+pip install argus-osint[intel]           # + WHOIS, DNS, phone parsing
+pip install argus-osint[playwright]      # + browser automation
+pip install argus-osint[api]             # + REST API server
+pip install argus-osint[all]             # everything
 ```
 
-### Configuration
+<details>
+<summary><b>🛠️ Development setup</b></summary>
 
 ```bash
-argus config init    # Create default argus.toml
-argus config show    # Display current config
-argus config path    # Show config file locations
+git clone https://github.com/TomOst-Sec/Argus-OSINT.git
+cd Argus-OSINT
+uv sync --group dev
+uv run pytest tests/ -x     # run tests
+uv run argus platforms       # verify 64 platforms
 ```
+</details>
 
-### REST API Server
+---
+
+## ⚙️ Configuration
 
 ```bash
-pip install argus-osint[api]
-argus serve --api --port 8000
-# OpenAPI docs at http://localhost:8000/docs
+argus config init   # creates argus.toml
 ```
-
-### MCP Server (for Claude Code)
-
-```bash
-argus serve --mcp
-```
-
-## Configuration
-
-Argus uses `argus.toml` for configuration. Create one with `argus config init`.
 
 ```toml
 [general]
@@ -148,48 +213,58 @@ default_threshold = 0.45
 max_concurrent_requests = 10
 
 [stealth]
-user_agent_rotation = true
 min_delay = 2.0
 max_delay = 5.0
 
-[verification]
-minimum_threshold = 0.30
-photo_matching_enabled = true
-
-[platforms.github]
-enabled = true
-rate_limit_per_minute = 30
+[intel]
+hibp_api_key = ""           # haveibeenpwned.com ($3.50/mo)
+shodan_api_key = ""         # shodan.io (free tier)
+virustotal_api_key = ""     # virustotal.com (free tier)
+hunter_api_key = ""         # hunter.io (free tier)
+enable_breach_check = true
+enable_domain_intel = true
 ```
 
-Configuration priority: CLI flags > environment variables > ./argus.toml > ~/.argus/argus.toml > defaults.
+Environment overrides: `ARGUS_INTEL_HIBP_API_KEY=xxx`
 
-Environment variable overrides use `ARGUS_` prefix: `ARGUS_GENERAL_THRESHOLD=0.6`.
+---
 
-## Architecture
+## 🏗️ Architecture
 
 ```
-Target Input ──> Resolver Agent ──> Linker Agent ──> Profiler Agent
-                      │                  │                 │
-              ┌───────┴───────┐          │                 │
-              │  Platform     │    Topic Search       TF-IDF Topic
-              │  Fan-out      │    + Semantic Sim     Extraction
-              │  (parallel)   │                       + Dimension
-              │               │                       Classification
-              └───────┬───────┘
-                      │
-              Verification Engine
-              (multi-signal scoring)
+                    ┌─────────────────────────────────────────┐
+                    │              ARGUS ENGINE                │
+                    ├─────────────────────────────────────────┤
+  Name / Email ───► │  Resolver ──► Verification ──► Scoring  │ ───► Dossier
+  Phone / Domain    │      │            Engine          │      │
+                    │      ▼                            ▼      │
+                    │  64 Platforms    19 Intel     Correlation │
+                    │  (parallel)     Sources       Engine     │
+                    ├─────────────────────────────────────────┤
+                    │  Stealth Layer: UA rotation, rate limits, │
+                    │  proxy support, Camoufox browser          │
+                    └─────────────────────────────────────────┘
 ```
 
-See [docs/architecture.md](docs/architecture.md) for detailed design documentation.
+**Verification signals**: photo hash (35%) · bio similarity (20%) · timezone (15%) · username patterns (10%) · connections (10%) · writing style (10%)
 
-## Documentation
+---
 
-- [Architecture Guide](docs/architecture.md)
-- [Platform Development](docs/platform-development.md)
-- [API Reference](docs/api-reference.md)
-- [Configuration Reference](docs/configuration.md)
+## 🔌 Integrations
 
-## License
+```bash
+argus serve --api --port 8000   # REST API (FastAPI + OpenAPI docs)
+argus serve --mcp               # MCP server for Claude Code
+```
 
-MIT
+Also integrates with **LangChain** and **CrewAI** as tool providers.
+
+---
+
+<div align="center">
+
+**MIT License** · Built for authorized security research, CTF, and OSINT investigations only.
+
+All sources are **publicly accessible APIs** and **legally queryable services**. No unauthorized access.
+
+</div>
